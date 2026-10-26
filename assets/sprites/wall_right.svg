@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 160" width="128" height="160">
+  <defs>
+    <linearGradient id="wallRGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ced4da"/>
+      <stop offset="100%" stop-color="#adb5bd"/>
+    </linearGradient>
+  </defs>
+  <!-- Wall face -->
+  <polygon points="64,2 126,33 126,129 64,98" fill="url(#wallRGrad)" stroke="#495057" stroke-width="1.5"/>
+  <!-- Top trim -->
+  <polygon points="64,2 126,33 126,38 64,7" fill="#adb5bd" stroke="#6c757d" stroke-width="1"/>
+  <!-- Baseboard -->
+  <polygon points="64,89 126,120 126,129 64,98" fill="#343a40"/>
+  <polygon points="64,86 126,117 126,120 64,89" fill="#495057"/>
+  <!-- Window -->
+  <polygon points="80,50 112,66 112,96 80,80" fill="#a2d2ff" stroke="#3d5a80" stroke-width="2"/>
+  <polygon points="83,53 109,66 109,93 83,80" fill="#caf0f8"/>
+  <line x1="96" y1="58" x2="96" y2="88" stroke="#3d5a80" stroke-width="1.5"/>
+  <line x1="83" y1="67" x2="109" y2="80" stroke="#3d5a80" stroke-width="1.5"/>
+</svg>

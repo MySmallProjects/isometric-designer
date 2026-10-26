@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Isometric Room Designer</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'><polygon points='12,2 22,7 12,12 2,7'/><polygon points='2,7 12,12 12,22 2,17' fill='%231d4ed8'/><polygon points='22,7 12,12 12,22 22,17' fill='%232563eb'/></svg>">
+</head>
+<body>
+
+  <!-- Top App Navigation & Toolbar -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="12,2 22,7.5 12,13 2,7.5" opacity="0.9"/>
+          <polygon points="2,7.5 12,13 12,22 2,16.5" opacity="0.7"/>
+          <polygon points="22,7.5 12,13 12,22 22,16.5" opacity="0.5"/>
+        </svg>
+      </div>
+      <h1>IsoRoom Studio</h1>
+      <span class="brand-badge">2.5D</span>
+    </div>
+
+    <div class="toolbar">
+      <!-- Tool Selection (Select vs Pan) -->
+      <div class="tool-group">
+        <button id="btnToolSelect" class="btn btn-tool active" title="Select Tool (V) - Click to select and move sprites">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M3 3l7 18 3-7 7-3L3 3z"/>
+          </svg>
+          Select
+        </button>
+        <button id="btnToolPan" class="btn btn-tool" title="Pan Tool (H) - Drag anywhere to pan the room canvas">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v3M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v6M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8M6 14a6 6 0 0 0 12 0v-3a2 2 0 0 0-2-2 2 2 0 0 0-2 2"/>
+          </svg>
+          Pan
+        </button>
+      </div>
+
+      <!-- Grid Controls -->
+      <div class="tool-group">
+        <label for="gridSizeInput" title="Tile width for grid">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="3" y1="15" x2="21" y2="15"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+            <line x1="15" y1="3" x2="15" y2="21"/>
+          </svg>
+          Grid:
+        </label>
+        <input type="number" id="gridSizeInput" class="tool-input-number" min="8" max="256" step="8" value="64" title="Grid Size (px)">
+        <span style="font-size: 11px; color: var(--text-dim);">px</span>
+
+        <select id="gridTypeSelect" class="tool-select" title="Grid Projection Style">
+          <option value="isometric" selected>Isometric (Diamond)</option>
+          <option value="rectangular">Orthogonal (Square)</option>
+        </select>
+
+        <label class="toggle-label" title="Snap sprite movement to grid">
+          <input type="checkbox" id="snapToggle" checked>
+          Snap
+        </label>
+
+        <label class="toggle-label" title="Show/Hide grid lines">
+          <input type="checkbox" id="showGridToggle" checked>
+          Show
+        </label>
+      </div>
+
+      <!-- Depth Sorting & View Tools -->
+      <div class="tool-group">
+        <button id="btnAutoSort" class="btn" title="Sort sprites by isometric depth (bottom Y)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="7 15 12 20 17 15"/>
+            <polyline points="7 9 12 4 17 9"/>
+          </svg>
+          Depth Sort
+        </button>
+
+        <button id="btnZoomOut" class="btn btn-icon-only" title="Zoom Out (-)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </button>
+        <span id="zoomPercent" style="font-size: 11px; font-weight: 600; width: 38px; text-align: center; color: var(--text-muted);">100%</span>
+        <button id="btnZoomIn" class="btn btn-icon-only" title="Zoom In (+)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </button>
+        <button id="btnResetView" class="btn" title="Center view & reset zoom">Reset View</button>
+      </div>
+
+      <!-- Project Actions -->
+      <div class="tool-group">
+        <button id="btnClear" class="btn btn-danger" title="Clear all sprites from canvas">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          Clear
+        </button>
+        <button id="btnExport" class="btn btn-primary" title="Export canvas drawing as PNG image">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export PNG
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Work Area -->
+  <main class="app-body">
+
+    <!-- Left Sidebar: Sprite Library -->
+    <aside class="sidebar-library">
+      <div class="library-header">
+        <div class="library-title">
+          <h2>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            Sprite Library
+          </h2>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span id="libraryCount" class="library-count">0 sprites</span>
+            <button id="btnRefreshLibrary" class="btn btn-icon-only" style="width: 24px; height: 24px; padding: 0;" title="Refresh & re-scan assets folder">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="search-box">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="spriteSearchInput" placeholder="Filter sprites...">
+        </div>
+
+        <div class="category-tabs" id="categoryTabs">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Scrollable Library Grid -->
+      <div class="library-grid" id="libraryGrid">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Upload Custom Sprites Dropzone -->
+      <div class="library-upload">
+        <div class="upload-dropzone" id="uploadDropzone">
+          <input type="file" id="spriteFileInput" multiple accept="image/*,.svg,.png,.jpg,.jpeg,.gif,.webp" style="display: none;">
+          <input type="file" id="folderFileInput" webkitdirectory directory multiple style="display: none;">
+          <p class="upload-text">
+            <span class="upload-highlight">+ Add custom sprites</span>
+            <br>Drop JPG, PNG, GIF, SVG files here
+          </p>
+          <div style="display: flex; gap: 6px; margin-top: 8px; justify-content: center;">
+            <button type="button" id="btnPickFiles" class="btn" style="height: 24px; font-size: 11px; padding: 0 8px;">Pick Files</button>
+            <button type="button" id="btnPickFolder" class="btn" style="height: 24px; font-size: 11px; padding: 0 8px;" title="Select entire assets folder to import all images at once">Load Folder</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Canvas Workspace -->
+    <section class="canvas-viewport" id="canvasViewport">
+      <canvas id="roomCanvas"></canvas>
+
+      <!-- Keyboard & Navigation Hint -->
+      <div class="canvas-hint">
+        <span><kbd>Click</kbd> Select / Deselect</span>
+        <span><kbd>Drag Corner Points</kbd> Resize</span>
+        <span><kbd>Space</kbd> + Drag or <kbd>Right-Click</kbd> Drag to Pan</span>
+        <span><kbd>Scroll</kbd> Zoom</span>
+        <span><kbd>Del</kbd> Remove</span>
+      </div>
+    </section>
+
+    <!-- Slide-out Inspector Panel (Right) -->
+    <aside class="inspector-panel" id="inspectorPanel">
+      <div class="inspector-header">
+        <h3 class="inspector-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          Sprite Inspector
+        </h3>
+        <button id="btnCloseInspector" class="btn-close-inspector" title="Close Panel (Deselect)">✕</button>
+      </div>
+
+      <div class="inspector-body">
+        <!-- Selected Sprite Preview -->
+        <div class="inspector-preview-box">
+          <img id="inspPreviewImg" src="" alt="Selected Sprite">
+        </div>
+
+        <!-- Remove Background Action -->
+        <button id="btnOpenBgRemover" class="btn btn-wand" style="width: 100%; height: 32px;" title="Remove white or solid background and make transparent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 4V2m0 16v-2m6-6h-2M4 12H2m15.5-5.5l-1.5 1.5M6 18l-1.5 1.5M17.5 17.5L16 16M6 6L4.5 4.5M14 9l-9 9 2 2 9-9z"/>
+          </svg>
+          Remove Background
+        </button>
+
+        <!-- File Details -->
+        <div class="inspector-section">
+          <span class="section-label">Sprite Details</span>
+          <div class="info-table">
+            <div class="info-row">
+              <span class="info-key">Filename</span>
+              <span class="info-val" id="inspFilename">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Original Size</span>
+              <span class="info-val" id="inspOrigDimensions">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Canvas Position</span>
+              <span class="info-val" id="inspPosition">X: 0, Y: 0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dimensions & Resize Controls -->
+        <div class="inspector-section">
+          <span class="section-label">Resize Sprite</span>
+          <div class="dimension-editor">
+            <div class="dim-row">
+              <div class="dim-input-group">
+                <label for="inspWidthInput">Width</label>
+                <div class="dim-input-wrapper">
+                  <input type="number" id="inspWidthInput" min="10" step="1">
+                  <span class="dim-unit">px</span>
+                </div>
+              </div>
+
+              <!-- Aspect Lock Toggle -->
+              <div class="dim-aspect-lock">
+                <button type="button" id="btnToggleAspect" title="Aspect Ratio Locked (Click to toggle)">
+                  <svg id="aspectLockIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="dim-input-group">
+                <label for="inspHeightInput">Height</label>
+                <div class="dim-input-wrapper">
+                  <input type="number" id="inspHeightInput" min="10" step="1">
+                  <span class="dim-unit">px</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Scale Presets -->
+            <div class="preset-buttons">
+              <button class="preset-btn" data-scale="0.5">50%</button>
+              <button class="preset-btn" data-scale="0.75">75%</button>
+              <button class="preset-btn" data-scale="1.0">100%</button>
+              <button class="preset-btn" data-scale="1.5">150%</button>
+              <button class="preset-btn" data-scale="2.0">200%</button>
+            </div>
+
+            <!-- Prominent Set Button -->
+            <button id="btnSetDimensions" class="btn btn-primary btn-set-dimensions" title="Apply entered dimensions to the sprite on canvas">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Set Dimensions
+            </button>
+          </div>
+        </div>
+
+        <!-- Layer Ordering -->
+        <div class="inspector-section">
+          <span class="section-label">Layer Arrangement</span>
+          <div class="layer-controls">
+            <button id="btnBringForward" class="btn" title="Bring Forward">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="18 15 12 9 6 15"/>
+              </svg>
+              Forward
+            </button>
+            <button id="btnSendBackward" class="btn" title="Send Backward">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+              Backward
+            </button>
+            <button id="btnBringToFront" class="btn" title="Bring to Front">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="18 12 12 6 6 12"/><polyline points="18 18 12 12 6 18"/>
+              </svg>
+              To Front
+            </button>
+            <button id="btnSendToBack" class="btn" title="Send to Back">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 6 12 12 18 6"/><polyline points="6 12 12 18 18 12"/>
+              </svg>
+              To Back
+            </button>
+          </div>
+        </div>
+
+        <!-- Inspector Actions: Duplicate & Remove -->
+        <div class="inspector-actions">
+          <button id="btnDuplicate" class="btn" title="Duplicate selected sprite (Ctrl+D)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Duplicate Sprite
+          </button>
+          <button id="btnRemoveSprite" class="btn btn-danger" title="Remove sprite from canvas (Del)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Remove Sprite
+          </button>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Background Removal Modal -->
+  <div class="modal-backdrop" id="bgRemoverModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 9l-9 9 2 2 9-9z"/><path d="M18 2v4m2-2h-4"/>
+          </svg>
+          Remove Background &amp; Make Transparent
+        </h3>
+        <button id="btnCloseBgModal" class="btn-close-inspector" title="Close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Split Before / After View -->
+        <div class="bg-compare-grid">
+          <div class="compare-col">
+            <div class="compare-header">Original Image</div>
+            <div class="compare-view-box">
+              <img id="bgOriginalImg" src="" alt="Original" style="cursor: crosshair;">
+            </div>
+          </div>
+          <div class="compare-col">
+            <div class="compare-header">
+              <span>Transparent Result</span>
+              <span style="font-size: 10px; color: var(--accent); text-transform: none;">Checkerboard = Transparent</span>
+            </div>
+            <div class="compare-view-box transparency-checker">
+              <canvas id="bgResultCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls Card -->
+        <div class="bg-controls-card">
+          <div class="bg-controls-row">
+            <!-- Background Color Picker -->
+            <div class="bg-control-item">
+              <label for="bgColorPicker">Background Color:</label>
+              <div class="color-picker-wrap">
+                <input type="color" id="bgColorPicker" class="color-swatch-input" value="#ffffff">
+                <span id="bgColorHex" style="font-family: monospace; font-size: 12px; color: var(--text-muted);">#ffffff</span>
+                <button type="button" id="btnEyedropper" class="btn" style="height: 28px; padding: 0 8px; font-size: 11px;" title="Pick color by clicking on original image">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 11l-8-8-8.5 8.5a2.12 2.12 0 0 0 0 3L6 18l1.5-1.5L9 18l6-6"/>
+                  </svg>
+                  Eyedrop
+                </button>
+              </div>
+            </div>
+
+            <!-- Tolerance Slider -->
+            <div class="bg-control-item">
+              <label for="bgTolerance">Tolerance: <span id="bgToleranceVal" style="color: var(--primary); font-weight: 700;">20%</span></label>
+              <div class="tolerance-slider-wrap">
+                <input type="range" id="bgTolerance" class="tolerance-slider" min="1" max="80" value="20">
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-controls-row">
+            <!-- Mode Radio -->
+            <div class="bg-control-item">
+              <label>Detection:</label>
+              <div class="mode-radio-group">
+                <label class="mode-radio-label" title="Only removes background from outer borders inward, keeping white details inside intact">
+                  <input type="radio" name="bgMode" value="contiguous" checked>
+                  Edges only (Recommended)
+                </label>
+                <label class="mode-radio-label" title="Removes matching color everywhere in the image">
+                  <input type="radio" name="bgMode" value="global">
+                  Entire image
+                </label>
+              </div>
+            </div>
+
+            <!-- Smooth Edges Toggle -->
+            <div class="bg-control-item">
+              <label class="toggle-label" title="Blends edges smoothly to avoid jagged white outlines">
+                <input type="checkbox" id="bgSmoothEdges" checked>
+                Smooth Edges (Anti-alias)
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btnCancelBgModal" class="btn">Cancel</button>
+
+        <div class="modal-footer-actions">
+          <button id="btnDownloadTransparentPng" class="btn" title="Download transparent PNG file to your computer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download PNG
+          </button>
+          <button id="btnSaveToAssets" class="btn" title="Save directly into assets/sprites folder on disk">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+            </svg>
+            Save to Assets
+          </button>
+          <button id="btnApplyTransparent" class="btn btn-primary" title="Apply transparent background to sprite on canvas">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Apply to Sprite
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/manifest.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/bg_remover.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+

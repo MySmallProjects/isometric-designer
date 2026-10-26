@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90" width="120" height="90">
+  <defs>
+    <linearGradient id="woodTable" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="60" cy="80" rx="42" ry="8" fill="#000" opacity="0.18"/>
+  <!-- Legs -->
+  <polygon points="20,40 24,42 24,74 20,72" fill="#451a03"/>
+  <polygon points="60,60 64,62 64,84 60,82" fill="#451a03"/>
+  <polygon points="96,42 100,40 100,72 96,74" fill="#451a03"/>
+  <polygon points="58,22 62,20 62,50 58,52" fill="#311302"/>
+  <!-- Table Top Thickness -->
+  <polygon points="12,32 60,56 60,63 12,39" fill="#92400e" stroke="#451a03" stroke-width="1"/>
+  <polygon points="60,56 108,32 108,39 60,63" fill="#78350f" stroke="#451a03" stroke-width="1"/>
+  <!-- Table Top Surface -->
+  <polygon points="60,8 108,32 60,56 12,32" fill="#d97706" stroke="#78350f" stroke-width="1.5"/>
+  <!-- Decorative centerpiece (bowl with fruit) -->
+  <ellipse cx="60" cy="32" rx="10" ry="5" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+  <circle cx="58" cy="30" r="3" fill="#ef4444"/>
+  <circle cx="63" cy="29" r="2.5" fill="#22c55e"/>
+</svg>

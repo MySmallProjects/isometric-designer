@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 115" width="130" height="115">
+  <!-- Shadow -->
+  <ellipse cx="65" cy="106" rx="50" ry="8" fill="#000" opacity="0.18"/>
+  <!-- Legs (metal black) -->
+  <rect x="22" y="55" width="4" height="42" fill="#1e293b"/>
+  <rect x="104" y="55" width="4" height="42" fill="#1e293b"/>
+  <rect x="56" y="70" width="4" height="38" fill="#0f172a"/>
+  <!-- Desktop Slab -->
+  <polygon points="65,18 118,44 65,70 12,44" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+  <polygon points="12,44 65,70 65,76 12,50" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1"/>
+  <polygon points="65,70 118,44 118,50 65,76" fill="#94a3b8" stroke="#64748b" stroke-width="1"/>
+  <!-- Laptop on desk -->
+  <!-- Base -->
+  <polygon points="60,40 76,48 64,54 48,46" fill="#475569"/>
+  <!-- Screen -->
+  <polygon points="60,40 76,48 76,32 60,24" fill="#0284c7" stroke="#334155" stroke-width="1"/>
+  <polygon points="62,39 74,45 74,33 62,27" fill="#38bdf8"/>
+  <!-- Desk Lamp -->
+  <circle cx="95" cy="35" r="4" fill="#e2e8f0" stroke="#64748b"/>
+  <line x1="95" y1="35" x2="92" y2="18" stroke="#64748b" stroke-width="2"/>
+  <line x1="92" y1="18" x2="84" y2="22" stroke="#64748b" stroke-width="2"/>
+  <polygon points="82,20 86,24 78,28" fill="#f59e0b"/>
+  <!-- Coffee Mug -->
+  <ellipse cx="38" cy="46" rx="3" ry="2" fill="#ef4444"/>
+  <rect x="35" y="46" width="6" height="6" rx="1" fill="#dc2626"/>
+</svg>

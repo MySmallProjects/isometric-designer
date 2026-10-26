@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 110" width="80" height="110">
+  <defs>
+    <linearGradient id="potGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f5ebe0"/>
+      <stop offset="60%" stop-color="#e3d5ca"/>
+      <stop offset="100%" stop-color="#d5bdaf"/>
+    </linearGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="40" cy="102" rx="22" ry="6" fill="#000" opacity="0.18"/>
+  <!-- Plant Pot -->
+  <path d="M25,72 L55,72 L50,100 L30,100 Z" fill="url(#potGrad)" stroke="#b08968" stroke-width="1.5"/>
+  <ellipse cx="40" cy="72" rx="15" ry="5" fill="#6f4e37" stroke="#b08968" stroke-width="1.5"/>
+  <!-- Stems & Big Monstera Leaves -->
+  <path d="M40,72 Q35,50 20,40 Q15,48 25,60" fill="#2d6a4f" stroke="#1b4332" stroke-width="1"/>
+  <path d="M40,72 Q45,45 62,35 Q65,45 50,58" fill="#40916c" stroke="#1b4332" stroke-width="1"/>
+  <path d="M40,70 Q40,30 35,15 Q48,18 45,40" fill="#52b788" stroke="#1b4332" stroke-width="1"/>
+  <path d="M40,72 Q50,55 60,65 Q50,75 42,72" fill="#74c69d" stroke="#1b4332" stroke-width="1"/>
+  <path d="M40,72 Q25,58 18,65 Q25,75 38,72" fill="#40916c" stroke="#1b4332" stroke-width="1"/>
+</svg>

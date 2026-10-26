@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 120" width="140" height="120">
+  <!-- Shadow -->
+  <ellipse cx="70" cy="108" rx="55" ry="9" fill="#000" opacity="0.2"/>
+  <!-- Headboard -->
+  <polygon points="25,40 60,22 80,32 45,50" fill="#582f0e" stroke="#331800" stroke-width="1.5"/>
+  <polygon points="25,40 45,50 45,72 25,62" fill="#7f4f24" stroke="#331800" stroke-width="1.5"/>
+  <polygon points="45,50 80,32 80,54 45,72" fill="#331800" stroke="#331800" stroke-width="1.5"/>
+  <!-- Mattress / Bed Base -->
+  <polygon points="42,50 96,23 124,37 70,64" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <!-- Pillows -->
+  <polygon points="50,44 65,36 72,40 57,48" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <polygon points="68,35 83,27 90,31 75,39" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <!-- Duvet / Blanket -->
+  <polygon points="52,58 84,42 118,59 86,75" fill="#0284c7" stroke="#0369a1" stroke-width="1.5"/>
+  <polygon points="52,58 86,75 86,92 52,75" fill="#0369a1" stroke="#075985" stroke-width="1.5"/>
+  <polygon points="86,75 118,59 118,76 86,92" fill="#075985" stroke="#0c4a6e" stroke-width="1.5"/>
+  <!-- Folded top duvet sheet -->
+  <polygon points="50,54 82,38 88,41 56,57" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+</svg>

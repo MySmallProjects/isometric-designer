@@ -1,0 +1,190 @@
+// Auto-generated assets manifest
+window.ASSETS_MANIFEST = [
+  {
+    "id": "armchair",
+    "name": "Armchair",
+    "category": "Furniture",
+    "filename": "armchair.svg",
+    "src": "assets/sprites/armchair.svg",
+    "tags": [
+      "furniture",
+      "svg"
+    ]
+  },
+  {
+    "id": "bed_queen",
+    "name": "Bed Queen",
+    "category": "Furniture",
+    "filename": "bed_queen.svg",
+    "src": "assets/sprites/bed_queen.svg",
+    "tags": [
+      "furniture",
+      "svg"
+    ]
+  },
+  {
+    "id": "bookshelf",
+    "name": "Bookshelf",
+    "category": "Storage",
+    "filename": "bookshelf.svg",
+    "src": "assets/sprites/bookshelf.svg",
+    "tags": [
+      "storage",
+      "svg"
+    ]
+  },
+  {
+    "id": "bookshelf4",
+    "name": "Bookshelf4",
+    "category": "Storage",
+    "filename": "bookshelf4.jpg",
+    "src": "assets/sprites/bookshelf4.jpg",
+    "tags": [
+      "storage",
+      "jpg"
+    ]
+  },
+  {
+    "id": "bookshelf5",
+    "name": "Bookshelf5",
+    "category": "Storage",
+    "filename": "bookshelf5.jpeg",
+    "src": "assets/sprites/bookshelf5.jpeg",
+    "tags": [
+      "storage",
+      "jpeg"
+    ]
+  },
+  {
+    "id": "desk2",
+    "name": "Desk2",
+    "category": "Furniture",
+    "filename": "desk2.png",
+    "src": "assets/sprites/desk2.png",
+    "tags": [
+      "furniture",
+      "png"
+    ]
+  },
+  {
+    "id": "floor_carpet",
+    "name": "Floor Carpet",
+    "category": "Floors",
+    "filename": "floor_carpet.svg",
+    "src": "assets/sprites/floor_carpet.svg",
+    "tags": [
+      "floors",
+      "svg"
+    ]
+  },
+  {
+    "id": "floor_lamp",
+    "name": "Floor Lamp",
+    "category": "Lighting",
+    "filename": "floor_lamp.svg",
+    "src": "assets/sprites/floor_lamp.svg",
+    "tags": [
+      "lighting",
+      "svg"
+    ]
+  },
+  {
+    "id": "floor_stone",
+    "name": "Floor Stone",
+    "category": "Floors",
+    "filename": "floor_stone.svg",
+    "src": "assets/sprites/floor_stone.svg",
+    "tags": [
+      "floors",
+      "svg"
+    ]
+  },
+  {
+    "id": "floor_wood",
+    "name": "Floor Wood",
+    "category": "Floors",
+    "filename": "floor_wood.svg",
+    "src": "assets/sprites/floor_wood.svg",
+    "tags": [
+      "floors",
+      "svg"
+    ]
+  },
+  {
+    "id": "indoor_plant",
+    "name": "Indoor Plant",
+    "category": "Decor",
+    "filename": "indoor_plant.svg",
+    "src": "assets/sprites/indoor_plant.svg",
+    "tags": [
+      "decor",
+      "svg"
+    ]
+  },
+  {
+    "id": "retro_tv",
+    "name": "Retro Tv",
+    "category": "Furniture",
+    "filename": "retro_tv.svg",
+    "src": "assets/sprites/retro_tv.svg",
+    "tags": [
+      "furniture",
+      "svg"
+    ]
+  },
+  {
+    "id": "sofa_isometric",
+    "name": "Sofa Isometric",
+    "category": "Furniture",
+    "filename": "sofa_isometric.svg",
+    "src": "assets/sprites/sofa_isometric.svg",
+    "tags": [
+      "furniture",
+      "svg"
+    ]
+  },
+  {
+    "id": "table_isometric",
+    "name": "Table Isometric",
+    "category": "Furniture",
+    "filename": "table_isometric.svg",
+    "src": "assets/sprites/table_isometric.svg",
+    "tags": [
+      "furniture",
+      "svg"
+    ]
+  },
+  {
+    "id": "wall_left",
+    "name": "Wall Left",
+    "category": "Walls",
+    "filename": "wall_left.svg",
+    "src": "assets/sprites/wall_left.svg",
+    "tags": [
+      "walls",
+      "svg"
+    ]
+  },
+  {
+    "id": "wall_right",
+    "name": "Wall Right",
+    "category": "Walls",
+    "filename": "wall_right.svg",
+    "src": "assets/sprites/wall_right.svg",
+    "tags": [
+      "walls",
+      "svg"
+    ]
+  },
+  {
+    "id": "work_desk",
+    "name": "Work Desk",
+    "category": "Furniture",
+    "filename": "work_desk.svg",
+    "src": "assets/sprites/work_desk.svg",
+    "tags": [
+      "furniture",
+      "svg"
+    ]
+  }
+];

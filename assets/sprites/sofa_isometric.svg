@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 110" width="130" height="110">
+  <defs>
+    <linearGradient id="sofaBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3a86ff"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="sofaDark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#172554"/>
+    </linearGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="65" cy="98" rx="55" ry="10" fill="#000" opacity="0.18"/>
+  <!-- Backrest -->
+  <polygon points="20,35 60,15 110,40 70,60" fill="#60a5fa" stroke="#1e40af" stroke-width="1.5"/>
+  <polygon points="20,35 70,60 70,72 20,47" fill="#3b82f6" stroke="#1e40af" stroke-width="1.5"/>
+  <polygon points="70,60 110,40 110,52 70,72" fill="#1d4ed8" stroke="#1e40af" stroke-width="1.5"/>
+  <!-- Left armrest -->
+  <polygon points="12,50 32,40 44,46 24,56" fill="#93c5fd" stroke="#1e40af" stroke-width="1.5"/>
+  <polygon points="12,50 24,56 24,84 12,78" fill="#3b82f6" stroke="#1e40af" stroke-width="1.5"/>
+  <polygon points="24,56 44,46 44,74 24,84" fill="#1d4ed8" stroke="#1e40af" stroke-width="1.5"/>
+  <!-- Right armrest -->
+  <polygon points="86,77 106,67 118,73 98,83" fill="#93c5fd" stroke="#1e40af" stroke-width="1.5"/>
+  <polygon points="86,77 98,83 98,101 86,95" fill="#3b82f6" stroke="#1e40af" stroke-width="1.5"/>
+  <polygon points="98,83 118,73 118,91 98,101" fill="#1d4ed8" stroke="#1e40af" stroke-width="1.5"/>
+  <!-- Seat cushions -->
+  <polygon points="24,62 68,40 98,55 54,77" fill="#60a5fa" stroke="#1e40af" stroke-width="1.5"/>
+  <polygon points="24,62 54,77 54,86 24,71" fill="#2563eb" stroke="#1e40af" stroke-width="1.5"/>
+  <polygon points="54,77 98,55 98,64 54,86" fill="#1e40af" stroke="#1e40af" stroke-width="1.5"/>
+  <!-- Accent throw pillows -->
+  <polygon points="32,54 44,48 48,58 36,64" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+  <polygon points="76,46 88,40 92,50 80,56" fill="#f43f5e" stroke="#be123c" stroke-width="1"/>
+</svg>
