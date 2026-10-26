@@ -60,6 +60,15 @@ A lightweight, responsive web application for creating isometric room scenes usi
     - **Download PNG**: Saves `<name>_transparent.png` directly to your computer.
     - **Save to Assets**: Automatically writes the transparent PNG directly into `assets/sprites/` on disk (when running `server.py`).
 
+- **Room Layout Management (Save, Name, Rename, Delete)**:
+  - **Quick Save (Ctrl+S / Cmd+S)**: Instantly saves canvas changes to the active layout.
+  - **Named Layouts**: Save layouts under custom names (e.g. "Cozy Living Room", "Modern Office", "Isometric Bedroom").
+  - **Rename**: Quick-rename directly via the ✏️ pencil icon in the toolbar or in the Manage dialog.
+  - **Delete**: Remove obsolete layouts with safety confirmation (🗑️).
+  - **Switch Layouts**: Instant switching between rooms via the toolbar dropdown or Manage list.
+  - **Duplicate & Backup**: Clone layouts with one click; import and export layouts as `.json` files.
+  - **Zero-Friction Persistence**: Automatically saves to browser `localStorage` and synchronizes to server (`/api/save-layout`, `/api/delete-layout`) on Python or PHP + Nginx.
+
 - **Isometric Depth Sorting**:
   - "Depth Sort" button orders items based on their isometric Y coordinate so sprites in front naturally occlude objects behind them.
 
@@ -110,6 +119,7 @@ You can open `index.html` directly in your browser without a server:
 | `Click` | Select sprite / Deselect when clicking empty space |
 | `Drag Corner Points` | Resize sprite (maintains aspect ratio) |
 | `Delete` / `Backspace` | Remove selected sprite |
+| `Ctrl + S` / `Cmd + S` | Save active room layout |
 | `Ctrl + D` / `Cmd + D` | Duplicate selected sprite |
 | `Arrow Keys` | Nudge sprite by grid step |
 | `Shift + Arrow Keys` | Nudge sprite by 16px |

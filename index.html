@@ -95,6 +95,56 @@
         <button id="btnResetView" class="btn" title="Center view & reset zoom">Reset View</button>
       </div>
 
+      <!-- Room Layout Management (Save, Name, Rename, Delete, Switch) -->
+      <div class="tool-group tool-group-layout">
+        <label for="layoutSelect" class="layout-label" title="Active Room Layout">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          Layout:
+        </label>
+        <select id="layoutSelect" class="tool-select layout-select" title="Switch between saved room layouts">
+        </select>
+
+        <button type="button" id="btnSaveLayout" class="btn btn-sm btn-layout-save" title="Save changes to active layout (Ctrl+S)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+          </svg>
+          Save
+        </button>
+
+        <button type="button" id="btnSaveAsLayout" class="btn btn-sm" title="Save current canvas as a new named layout">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New / Save As...
+        </button>
+
+        <button type="button" id="btnRenameActiveLayout" class="btn btn-sm btn-icon-only" title="Rename active layout">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+        </button>
+
+        <button type="button" id="btnManageLayouts" class="btn btn-sm" title="Manage all layouts (Rename, Delete, Duplicate, Backup)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"/>
+            <line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          Manage
+        </button>
+      </div>
+
       <!-- Project Actions -->
       <div class="tool-group">
         <button id="btnClear" class="btn btn-danger" title="Clear all sprites from canvas">
@@ -530,11 +580,124 @@
     </div>
   </div>
 
+  <!-- Layout Manager Modal -->
+  <div class="modal-backdrop" id="layoutManagerModal">
+    <div class="modal-dialog modal-dialog-layouts">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          Manage Room Layouts
+        </h3>
+        <button id="btnCloseLayoutModal" class="btn-close-inspector" title="Close">✕</button>
+      </div>
+
+      <div class="modal-body layout-modal-body">
+        <!-- Top Toolbar within Modal -->
+        <div class="layout-modal-toolbar">
+          <div class="layout-modal-toolbar-left">
+            <button id="btnModalNewBlank" class="btn btn-sm btn-primary">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              New Blank Room
+            </button>
+            <button id="btnModalSaveCurrentAs" class="btn btn-sm">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+              </svg>
+              Save Canvas As New...
+            </button>
+          </div>
+          <div class="layout-modal-toolbar-right">
+            <label class="btn btn-sm btn-outline-file" title="Import layout from .json file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Import JSON
+              <input type="file" id="layoutImportInput" accept=".json" style="display: none;">
+            </label>
+            <button id="btnModalExportAll" class="btn btn-sm" title="Backup all saved layouts to JSON">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export All
+            </button>
+          </div>
+        </div>
+
+        <!-- Cards List -->
+        <div class="layout-cards-list" id="layoutCardsList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span class="layout-modal-count" id="layoutModalCount">0 saved layouts</span>
+        <button id="btnCloseLayoutModalFooter" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout Name / Rename Dialog Modal -->
+  <div class="modal-backdrop" id="layoutPromptModal">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <h3 class="modal-title" id="layoutPromptTitle">Save Layout</h3>
+        <button id="btnCloseLayoutPrompt" class="btn-close-inspector" title="Close">✕</button>
+      </div>
+      <form id="layoutPromptForm" class="modal-body" style="padding: 20px;">
+        <label for="layoutPromptInput" id="layoutPromptLabel" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px;">Layout Name:</label>
+        <input type="text" id="layoutPromptInput" class="form-input" placeholder="e.g. Cozy Bedroom" required autofocus autocomplete="off" style="width: 100%; box-sizing: border-box;">
+        <div id="layoutPromptHint" style="font-size: 11px; color: var(--text-dim); margin-top: 6px;">Give your isometric room layout a distinct name.</div>
+      </form>
+      <div class="modal-footer">
+        <button type="button" id="btnCancelLayoutPrompt" class="btn">Cancel</button>
+        <button type="button" id="btnConfirmLayoutPrompt" class="btn btn-primary">Save Layout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout Delete Confirmation Modal -->
+  <div class="modal-backdrop" id="layoutConfirmModal">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--danger);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          Delete Layout
+        </h3>
+        <button id="btnCloseLayoutConfirm" class="btn-close-inspector" title="Close">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <p id="layoutConfirmMessage" style="font-size: 13px; color: var(--text-main); margin: 0; line-height: 1.5;">
+          Are you sure you want to delete this layout?
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btnCancelLayoutConfirm" class="btn">Cancel</button>
+        <button type="button" id="btnConfirmLayoutDelete" class="btn btn-danger">Delete Layout</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="assets/manifest.js?v=2"></script>
   <script src="js/sprites.js?v=2"></script>
   <script src="js/bg_remover.js?v=2"></script>
   <script src="js/canvas.js?v=2"></script>
+  <script src="js/layouts.js?v=2"></script>
   <script src="js/app.js?v=2"></script>
 </body>
 </html>

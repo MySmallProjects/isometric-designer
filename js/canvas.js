@@ -266,6 +266,82 @@ class RoomCanvas {
     this.notifyListChange();
   }
 
+  setGridSize(size) {
+    let val = parseInt(size, 10);
+    if (isNaN(val) || val < 8) val = 8;
+    if (val > 256) val = 256;
+    this.grid.size = val;
+    this.requestRender();
+  }
+
+  setGridType(type) {
+    this.grid.type = type === 'rectangular' ? 'rectangular' : 'isometric';
+    this.requestRender();
+  }
+
+  // Get serializable snapshot of the room layout
+  getLayoutData() {
+    return {
+      gridSize: this.grid.size,
+      gridType: this.grid.type,
+      snapToGrid: this.grid.snap,
+      items: this.items.map(item => ({
+        id: item.id,
+        spriteId: item.spriteId,
+        name: item.name,
+        filename: item.filename,
+        src: item.src,
+        origWidth: item.origWidth,
+        origHeight: item.origHeight,
+        aspectRatio: item.aspectRatio,
+        x: item.x,
+        y: item.y,
+        width: item.width,
+        height: item.height,
+        zIndex: item.zIndex,
+        hidden: !!item.hidden,
+        locked: !!item.locked
+      }))
+    };
+  }
+
+  // Load a complete layout into the room canvas
+  loadLayoutData(layoutData) {
+    this.clear();
+    if (!layoutData) return;
+
+    if (layoutData.gridSize) {
+      this.grid.size = layoutData.gridSize;
+    }
+    if (layoutData.gridType) {
+      this.grid.type = layoutData.gridType;
+    }
+    if (typeof layoutData.snapToGrid === 'boolean') {
+      this.grid.snap = layoutData.snapToGrid;
+    }
+
+    if (Array.isArray(layoutData.items)) {
+      this.items = layoutData.items.map(item => ({ ...item }));
+      
+      // Preload any missing sprite images
+      this.items.forEach(item => {
+        const img = this.library.getImage(item.spriteId);
+        if (!img) {
+          const spriteDef = this.library.sprites.find(s => s.id === item.spriteId) || {
+            id: item.spriteId,
+            name: item.name || 'Sprite',
+            filename: item.filename || `${item.spriteId}.png`,
+            src: item.src || `assets/${item.filename}`
+          };
+          this.library.preload(spriteDef).then(() => this.requestRender());
+        }
+      });
+    }
+
+    this.requestRender();
+    this.notifyListChange();
+  }
+
   // Select/Deselect item
   selectItem(item) {
     if (this.selectedItem === item) return;

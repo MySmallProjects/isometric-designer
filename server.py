@@ -37,6 +37,30 @@ class IsoRoomHTTPHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(data)
             return
 
+        # API endpoint to list saved room layouts
+        if parsed.path == '/api/layouts':
+            layouts_dir = 'layouts'
+            os.makedirs(layouts_dir, exist_ok=True)
+            layouts = []
+            for fname in os.listdir(layouts_dir):
+                if fname.endswith('.json'):
+                    fpath = os.path.join(layouts_dir, fname)
+                    try:
+                        with open(fpath, 'r', encoding='utf-8') as f:
+                            layouts.append(json.load(f))
+                    except Exception as e:
+                        print(f"Error reading layout {fname}: {e}")
+            
+            layouts.sort(key=lambda l: l.get('updatedAt', 0), reverse=True)
+            data = json.dumps(layouts).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
         # Ensure no aggressive caching for development
         if parsed.path.endswith('.js') or parsed.path.endswith('.css') or parsed.path.endswith('.html'):
             self.extensions_map['.js'] = 'application/javascript'
@@ -141,6 +165,91 @@ class IsoRoomHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 return
             except Exception as e:
                 print(f"[Server] Error deleting sprite: {e}")
+                err_data = json.dumps({'success': False, 'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(err_data)))
+                self.end_headers()
+                self.wfile.write(err_data)
+                return
+
+        # Save room layout to layouts/<id>.json
+        if parsed.path == '/api/save-layout':
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(content_length).decode('utf-8')
+                layout = json.loads(body)
+                
+                layout_id = str(layout.get('id', ''))
+                # Sanitize layout_id
+                safe_id = ''.join(c for c in layout_id if c.isalnum() or c in ('_', '-'))
+                if not safe_id:
+                    import time
+                    safe_id = f"layout_{int(time.time())}"
+                    layout['id'] = safe_id
+                    
+                layouts_dir = 'layouts'
+                os.makedirs(layouts_dir, exist_ok=True)
+                layout_path = os.path.join(layouts_dir, f"{safe_id}.json")
+                
+                with open(layout_path, 'w', encoding='utf-8') as f:
+                    json.dump(layout, f, indent=2)
+                    
+                print(f"[Server] Saved layout: {layout.get('name', 'Untitled')} ({layout_path})")
+                
+                res_data = json.dumps({
+                    'success': True,
+                    'id': safe_id,
+                    'name': layout.get('name')
+                }).encode('utf-8')
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(res_data)))
+                self.end_headers()
+                self.wfile.write(res_data)
+                return
+            except Exception as e:
+                print(f"[Server] Error saving layout: {e}")
+                err_data = json.dumps({'success': False, 'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(err_data)))
+                self.end_headers()
+                self.wfile.write(err_data)
+                return
+
+        # Delete room layout from disk
+        if parsed.path == '/api/delete-layout':
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(content_length).decode('utf-8')
+                payload = json.loads(body)
+                layout_id = str(payload.get('id', ''))
+                safe_id = ''.join(c for c in layout_id if c.isalnum() or c in ('_', '-'))
+                
+                deleted = False
+                if safe_id:
+                    layout_path = os.path.join('layouts', f"{safe_id}.json")
+                    if os.path.isfile(layout_path):
+                        os.remove(layout_path)
+                        print(f"[Server] Deleted layout: {layout_path}")
+                        deleted = True
+                        
+                res_data = json.dumps({
+                    'success': True,
+                    'deleted': deleted,
+                    'id': safe_id
+                }).encode('utf-8')
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(res_data)))
+                self.end_headers()
+                self.wfile.write(res_data)
+                return
+            except Exception as e:
+                print(f"[Server] Error deleting layout: {e}")
                 err_data = json.dumps({'success': False, 'error': str(e)}).encode('utf-8')
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')

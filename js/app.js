@@ -31,6 +31,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnClear = document.getElementById('btnClear');
   const btnExport = document.getElementById('btnExport');
 
+  // DOM Elements - Layout Management (Toolbar)
+  const layoutSelect = document.getElementById('layoutSelect');
+  const btnSaveLayout = document.getElementById('btnSaveLayout');
+  const btnSaveAsLayout = document.getElementById('btnSaveAsLayout');
+  const btnRenameActiveLayout = document.getElementById('btnRenameActiveLayout');
+  const btnManageLayouts = document.getElementById('btnManageLayouts');
+
+  // DOM Elements - Layout Manager Modal
+  const layoutManagerModal = document.getElementById('layoutManagerModal');
+  const btnCloseLayoutModal = document.getElementById('btnCloseLayoutModal');
+  const btnCloseLayoutModalFooter = document.getElementById('btnCloseLayoutModalFooter');
+  const btnModalNewBlank = document.getElementById('btnModalNewBlank');
+  const btnModalSaveCurrentAs = document.getElementById('btnModalSaveCurrentAs');
+  const layoutImportInput = document.getElementById('layoutImportInput');
+  const btnModalExportAll = document.getElementById('btnModalExportAll');
+  const layoutCardsList = document.getElementById('layoutCardsList');
+  const layoutModalCount = document.getElementById('layoutModalCount');
+
+  // DOM Elements - Layout Prompt Modal (Name / Rename)
+  const layoutPromptModal = document.getElementById('layoutPromptModal');
+  const layoutPromptTitle = document.getElementById('layoutPromptTitle');
+  const layoutPromptLabel = document.getElementById('layoutPromptLabel');
+  const layoutPromptInput = document.getElementById('layoutPromptInput');
+  const layoutPromptHint = document.getElementById('layoutPromptHint');
+  const btnCancelLayoutPrompt = document.getElementById('btnCancelLayoutPrompt');
+  const btnCloseLayoutPrompt = document.getElementById('btnCloseLayoutPrompt');
+  const btnConfirmLayoutPrompt = document.getElementById('btnConfirmLayoutPrompt');
+  const layoutPromptForm = document.getElementById('layoutPromptForm');
+
+  // DOM Elements - Layout Delete Confirmation Modal
+  const layoutConfirmModal = document.getElementById('layoutConfirmModal');
+  const btnCloseLayoutConfirm = document.getElementById('btnCloseLayoutConfirm');
+  const btnCancelLayoutConfirm = document.getElementById('btnCancelLayoutConfirm');
+  const btnConfirmLayoutDelete = document.getElementById('btnConfirmLayoutDelete');
+  const layoutConfirmMessage = document.getElementById('layoutConfirmMessage');
+
   // DOM Elements - Sidebar Switcher & Tabs
   const tabBtnLibrary = document.getElementById('tabBtnLibrary');
   const tabBtnPlaced = document.getElementById('tabBtnPlaced');
@@ -126,9 +162,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderCategoryTabs();
   renderLibrary();
 
-  // Add default starter room scene so user sees an immediate beautiful room!
-  createStarterRoom(library, roomCanvas);
+  // Initialize Layout Manager
+  let layoutManager = null;
+  try {
+    layoutManager = typeof LayoutManager !== 'undefined' ? new LayoutManager() : null;
+    const storedLayouts = localStorage.getItem('isoroom_saved_layouts_v1');
+    if (!storedLayouts) {
+      createStarterRoom(library, roomCanvas);
+    }
+    if (layoutManager) {
+      const activeLayout = await layoutManager.init(roomCanvas.getLayoutData());
+      if (activeLayout && activeLayout.items && activeLayout.items.length > 0) {
+        roomCanvas.loadLayoutData(activeLayout);
+        if (activeLayout.gridSize) {
+          gridSizeInput.value = activeLayout.gridSize;
+          roomCanvas.setGridSize(activeLayout.gridSize);
+        }
+        if (activeLayout.gridType) {
+          gridTypeSelect.value = activeLayout.gridType;
+          roomCanvas.setGridType(activeLayout.gridType);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('LayoutManager initialization error:', err);
+    createStarterRoom(library, roomCanvas);
+  }
+
   renderPlacedList();
+  if (typeof populateLayoutSelect === 'function') {
+    populateLayoutSelect();
+  }
 
   // =========================================================================
   // Canvas Callbacks (Selection & Item Changes)
@@ -812,6 +876,459 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnExport.addEventListener('click', () => {
     roomCanvas.exportImage();
   });
+
+  // =========================================================================
+  // Room Layout Management (Save, Name, Rename, Delete, Switch, Export/Import)
+  // =========================================================================
+
+  let currentPromptAction = null;
+  let currentConfirmAction = null;
+
+  function timeAgo(ts) {
+    if (!ts) return 'Unknown';
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  function escapeHtml(str) {
+    return (str || '').replace(/[&<>"']/g, m => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[m]));
+  }
+
+  // Populate the toolbar layout selector dropdown
+  function populateLayoutSelect() {
+    if (!layoutSelect || !layoutManager) return;
+    const all = layoutManager.getAll();
+    const activeId = layoutManager.getActiveId();
+
+    layoutSelect.innerHTML = '';
+    all.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      const count = l.items ? l.items.length : 0;
+      opt.textContent = `${l.name} (${count} item${count !== 1 ? 's' : ''})`;
+      if (l.id === activeId) opt.selected = true;
+      layoutSelect.appendChild(opt);
+    });
+  }
+
+  // Switch layout when dropdown option changes
+  layoutSelect.addEventListener('change', (e) => {
+    if (!layoutManager) return;
+    const targetId = e.target.value;
+    if (targetId && layoutManager.setActiveId(targetId)) {
+      const active = layoutManager.getActive();
+      if (active) {
+        roomCanvas.loadLayoutData(active);
+        if (active.gridSize) {
+          gridSizeInput.value = active.gridSize;
+          roomCanvas.setGridSize(active.gridSize);
+        }
+        if (active.gridType) {
+          gridTypeSelect.value = active.gridType;
+          roomCanvas.setGridType(active.gridType);
+        }
+        showToast(`Loaded layout: "${active.name}"`);
+      }
+    }
+  });
+
+  // Quick Save Button (Ctrl+S)
+  function saveCurrentLayout() {
+    if (!layoutManager) return;
+    const saved = layoutManager.saveActive(roomCanvas.getLayoutData());
+    if (saved) {
+      showToast(`Saved layout: "${saved.name}"`);
+      populateLayoutSelect();
+    }
+  }
+
+  btnSaveLayout.addEventListener('click', saveCurrentLayout);
+
+  // Keyboard shortcut Ctrl+S / Cmd+S to save layout
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      saveCurrentLayout();
+    }
+  });
+
+  // Save As New Layout (from toolbar)
+  btnSaveAsLayout.addEventListener('click', () => {
+    if (!layoutManager) return;
+    const active = layoutManager.getActive();
+    const defaultName = active ? `${active.name} (Copy)` : 'My New Room';
+    openPromptModal({
+      title: 'Save Layout As...',
+      label: 'New Layout Name:',
+      hint: 'Enter a name to save current canvas as a new layout.',
+      initialValue: defaultName,
+      confirmText: 'Save New Layout',
+      onConfirm: (name) => {
+        const created = layoutManager.saveAsNew(name, roomCanvas.getLayoutData());
+        populateLayoutSelect();
+        showToast(`Saved as new layout: "${created.name}"`);
+      }
+    });
+  });
+
+  // Rename Active Layout Button (Pencil in toolbar)
+  btnRenameActiveLayout.addEventListener('click', () => {
+    if (!layoutManager) return;
+    const active = layoutManager.getActive();
+    if (!active) return;
+    openPromptModal({
+      title: 'Rename Layout',
+      label: 'Layout Name:',
+      hint: 'Enter a new name for this room layout.',
+      initialValue: active.name,
+      confirmText: 'Rename',
+      onConfirm: (newName) => {
+        layoutManager.rename(active.id, newName);
+        populateLayoutSelect();
+        showToast(`Renamed layout to "${newName}"`);
+      }
+    });
+  });
+
+  // Open Full Layouts Manager Modal
+  btnManageLayouts.addEventListener('click', () => {
+    openLayoutManagerModal();
+  });
+
+  function openLayoutManagerModal() {
+    renderLayoutCards();
+    layoutManagerModal.classList.add('is-active');
+  }
+
+  function closeLayoutManagerModal() {
+    layoutManagerModal.classList.remove('is-active');
+  }
+
+  btnCloseLayoutModal.addEventListener('click', closeLayoutManagerModal);
+  btnCloseLayoutModalFooter.addEventListener('click', closeLayoutManagerModal);
+
+  // New Blank Room (from modal)
+  btnModalNewBlank.addEventListener('click', () => {
+    openPromptModal({
+      title: 'Create Blank Room',
+      label: 'Room Name:',
+      hint: 'Enter a name for your fresh new empty room canvas.',
+      initialValue: 'Untitled Room',
+      confirmText: 'Create Room',
+      onConfirm: (name) => {
+        roomCanvas.clear();
+        const created = layoutManager.saveAsNew(name, roomCanvas.getLayoutData());
+        populateLayoutSelect();
+        closeLayoutManagerModal();
+        showToast(`Created blank room: "${created.name}"`);
+      }
+    });
+  });
+
+  // Save Canvas As New (from modal)
+  btnModalSaveCurrentAs.addEventListener('click', () => {
+    const active = layoutManager.getActive();
+    const defaultName = active ? `${active.name} (Copy)` : 'My Room';
+    openPromptModal({
+      title: 'Save Canvas As New Layout',
+      label: 'Layout Name:',
+      hint: 'Save the current canvas sprites into a new layout slot.',
+      initialValue: defaultName,
+      confirmText: 'Save Layout',
+      onConfirm: (name) => {
+        const created = layoutManager.saveAsNew(name, roomCanvas.getLayoutData());
+        populateLayoutSelect();
+        renderLayoutCards();
+        showToast(`Saved as "${created.name}"`);
+      }
+    });
+  });
+
+  // Export all layouts as backup JSON
+  btnModalExportAll.addEventListener('click', () => {
+    layoutManager.exportAllJson();
+    showToast('Exported all layouts as JSON backup');
+  });
+
+  // Import layout(s) from JSON file
+  layoutImportInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const count = layoutManager.importJson(evt.target.result);
+        const active = layoutManager.getActive();
+        if (active) {
+          roomCanvas.loadLayoutData(active);
+        }
+        populateLayoutSelect();
+        renderLayoutCards();
+        showToast(`Successfully imported ${count} layout${count !== 1 ? 's' : ''}!`);
+      } catch (err) {
+        showToast(`Import error: ${err.message}`, 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // Render the list of layout cards in the Manager Modal
+  function renderLayoutCards() {
+    const all = layoutManager.getAll();
+    const activeId = layoutManager.getActiveId();
+    layoutModalCount.textContent = `${all.length} saved layout${all.length !== 1 ? 's' : ''}`;
+    layoutCardsList.innerHTML = '';
+
+    if (all.length === 0) {
+      layoutCardsList.innerHTML = `
+        <div class="layout-empty-notice">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <div style="font-weight: 600;">No saved layouts found.</div>
+          <div style="font-size: 12px; margin-top: 4px;">Click "+ New Blank Room" or "Save Canvas As New" above!</div>
+        </div>
+      `;
+      return;
+    }
+
+    all.forEach(layout => {
+      const isActive = layout.id === activeId;
+      const count = layout.items ? layout.items.length : 0;
+      const card = document.createElement('div');
+      card.className = `layout-card ${isActive ? 'is-active' : ''}`;
+
+      card.innerHTML = `
+        <div class="layout-card-info">
+          <div class="layout-card-title">
+            <span>${escapeHtml(layout.name)}</span>
+            ${isActive ? '<span class="layout-badge-active">Active</span>' : ''}
+          </div>
+          <div class="layout-card-meta">
+            <span>${count} sprite${count !== 1 ? 's' : ''}</span>
+            <span>•</span>
+            <span>Grid: ${layout.gridSize || 64}px (${layout.gridType || 'isometric'})</span>
+            <span>•</span>
+            <span>Saved ${timeAgo(layout.updatedAt)}</span>
+          </div>
+        </div>
+
+        <div class="layout-card-actions">
+          ${!isActive ? `
+            <button class="btn btn-sm btn-primary btn-action-load" data-id="${layout.id}" title="Open this layout on canvas">
+              Load
+            </button>
+          ` : `
+            <button class="btn btn-sm btn-action-save" data-id="${layout.id}" title="Overwrite active layout with current canvas">
+              Save
+            </button>
+          `}
+          <button class="btn btn-sm btn-icon-only btn-action-rename" data-id="${layout.id}" title="Rename layout">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </button>
+          <button class="btn btn-sm btn-icon-only btn-action-duplicate" data-id="${layout.id}" title="Duplicate layout">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+          <button class="btn btn-sm btn-icon-only btn-action-export" data-id="${layout.id}" title="Download layout as JSON">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button class="btn btn-sm btn-icon-only btn-danger btn-action-delete" data-id="${layout.id}" title="Delete layout">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      `;
+
+      layoutCardsList.appendChild(card);
+    });
+  }
+
+  // Delegated event handling for layout cards
+  layoutCardsList.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    const id = btn.getAttribute('data-id');
+    const layout = layoutManager.get(id);
+    if (!layout) return;
+
+    // 1. Load layout
+    if (btn.classList.contains('btn-action-load')) {
+      layoutManager.setActiveId(id);
+      roomCanvas.loadLayoutData(layout);
+      if (layout.gridSize) {
+        gridSizeInput.value = layout.gridSize;
+        roomCanvas.setGridSize(layout.gridSize);
+      }
+      if (layout.gridType) {
+        gridTypeSelect.value = layout.gridType;
+        roomCanvas.setGridType(layout.gridType);
+      }
+      populateLayoutSelect();
+      renderLayoutCards();
+      showToast(`Loaded layout: "${layout.name}"`);
+      return;
+    }
+
+    // 2. Overwrite / Save to active layout
+    if (btn.classList.contains('btn-action-save')) {
+      layoutManager.saveActive(roomCanvas.getLayoutData());
+      populateLayoutSelect();
+      renderLayoutCards();
+      showToast(`Saved changes to "${layout.name}"`);
+      return;
+    }
+
+    // 3. Rename layout
+    if (btn.classList.contains('btn-action-rename')) {
+      openPromptModal({
+        title: 'Rename Layout',
+        label: 'Layout Name:',
+        hint: 'Enter a new name for this room layout.',
+        initialValue: layout.name,
+        confirmText: 'Rename',
+        onConfirm: (newName) => {
+          layoutManager.rename(id, newName);
+          populateLayoutSelect();
+          renderLayoutCards();
+          showToast(`Renamed layout to "${newName}"`);
+        }
+      });
+      return;
+    }
+
+    // 4. Duplicate layout
+    if (btn.classList.contains('btn-action-duplicate')) {
+      const clone = layoutManager.duplicate(id);
+      roomCanvas.loadLayoutData(clone);
+      populateLayoutSelect();
+      renderLayoutCards();
+      showToast(`Duplicated to "${clone.name}"`);
+      return;
+    }
+
+    // 5. Export single layout
+    if (btn.classList.contains('btn-action-export')) {
+      layoutManager.exportJson(id);
+      showToast(`Exported "${layout.name}" to JSON`);
+      return;
+    }
+
+    // 6. Delete layout
+    if (btn.classList.contains('btn-action-delete')) {
+      openConfirmModal({
+        message: `Are you sure you want to delete layout <strong>"${escapeHtml(layout.name)}"</strong>?<br><br>This layout and all its placed sprite positions will be removed.`,
+        confirmText: 'Delete Layout',
+        onConfirm: () => {
+          const wasActive = layoutManager.getActiveId() === id;
+          layoutManager.delete(id);
+          if (wasActive) {
+            const newActive = layoutManager.getActive();
+            if (newActive) roomCanvas.loadLayoutData(newActive);
+          }
+          populateLayoutSelect();
+          renderLayoutCards();
+          showToast(`Deleted layout: "${layout.name}"`);
+        }
+      });
+      return;
+    }
+  });
+
+  // Prompt Modal Handlers (Naming / Renaming)
+  function openPromptModal({ title, label, hint, initialValue, confirmText, onConfirm }) {
+    layoutPromptTitle.textContent = title || 'Enter Name';
+    layoutPromptLabel.textContent = label || 'Name:';
+    layoutPromptHint.textContent = hint || '';
+    layoutPromptInput.value = initialValue || '';
+    btnConfirmLayoutPrompt.textContent = confirmText || 'Confirm';
+    currentPromptAction = onConfirm;
+
+    layoutPromptModal.classList.add('is-active');
+    setTimeout(() => {
+      layoutPromptInput.focus();
+      layoutPromptInput.select();
+    }, 50);
+  }
+
+  function closePromptModal() {
+    layoutPromptModal.classList.remove('is-active');
+    currentPromptAction = null;
+  }
+
+  btnCancelLayoutPrompt.addEventListener('click', closePromptModal);
+  btnCloseLayoutPrompt.addEventListener('click', closePromptModal);
+
+  function submitPromptForm(e) {
+    if (e) e.preventDefault();
+    const val = layoutPromptInput.value.trim();
+    if (!val) {
+      layoutPromptInput.focus();
+      return;
+    }
+    const action = currentPromptAction;
+    closePromptModal();
+    if (typeof action === 'function') {
+      action(val);
+    }
+  }
+
+  layoutPromptForm.addEventListener('submit', submitPromptForm);
+  btnConfirmLayoutPrompt.addEventListener('click', submitPromptForm);
+
+  // Delete Confirmation Modal Handlers
+  function openConfirmModal({ message, confirmText, onConfirm }) {
+    layoutConfirmMessage.innerHTML = message || 'Are you sure?';
+    btnConfirmLayoutDelete.textContent = confirmText || 'Delete';
+    currentConfirmAction = onConfirm;
+    layoutConfirmModal.classList.add('is-active');
+  }
+
+  function closeConfirmModal() {
+    layoutConfirmModal.classList.remove('is-active');
+    currentConfirmAction = null;
+  }
+
+  btnCancelLayoutConfirm.addEventListener('click', closeConfirmModal);
+  btnCloseLayoutConfirm.addEventListener('click', closeConfirmModal);
+
+  btnConfirmLayoutDelete.addEventListener('click', () => {
+    const action = currentConfirmAction;
+    closeConfirmModal();
+    if (typeof action === 'function') {
+      action();
+    }
+  });
+
 
   // =========================================================================
   // Sprite Library UI & Interactions

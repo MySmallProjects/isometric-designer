@@ -238,13 +238,110 @@ switch ($endpoint) {
         ], JSON_UNESCAPED_SLASHES);
         break;
 
+    case 'layouts':
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method Not Allowed']);
+            exit;
+        }
+
+        $layouts_dir = $base_dir . '/layouts';
+        if (!is_dir($layouts_dir)) {
+            @mkdir($layouts_dir, 0775, true);
+        }
+
+        $layouts = [];
+        $files = @glob($layouts_dir . '/*.json') ?: [];
+        foreach ($files as $file) {
+            $content = @file_get_contents($file);
+            if ($content) {
+                $decoded = json_decode($content, true);
+                if ($decoded) {
+                    $layouts[] = $decoded;
+                }
+            }
+        }
+
+        usort($layouts, function($a, $b) {
+            return ($b['updatedAt'] ?? 0) <=> ($a['updatedAt'] ?? 0);
+        });
+
+        echo json_encode($layouts, JSON_UNESCAPED_SLASHES);
+        break;
+
+    case 'save-layout':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method Not Allowed']);
+            exit;
+        }
+
+        $input = file_get_contents('php://input');
+        $layout = json_decode($input, true);
+
+        if (!$layout || !is_array($layout)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Invalid JSON payload']);
+            exit;
+        }
+
+        $layout_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $layout['id'] ?? ('layout_' . time()));
+        $layout['id'] = $layout_id;
+
+        $layouts_dir = $base_dir . '/layouts';
+        if (!is_dir($layouts_dir)) {
+            @mkdir($layouts_dir, 0775, true);
+        }
+
+        $filepath = $layouts_dir . '/' . $layout_id . '.json';
+        $written = @file_put_contents($filepath, json_encode($layout, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        if ($written === false) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Failed to save layout to disk. Check permissions on layouts/ folder.']);
+            exit;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'id' => $layout_id,
+            'name' => $layout['name'] ?? 'Untitled'
+        ], JSON_UNESCAPED_SLASHES);
+        break;
+
+    case 'delete-layout':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method Not Allowed']);
+            exit;
+        }
+
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        $layout_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $data['id'] ?? '');
+
+        $deleted = false;
+        if (!empty($layout_id)) {
+            $filepath = $base_dir . '/layouts/' . $layout_id . '.json';
+            if (is_file($filepath)) {
+                $deleted = @unlink($filepath);
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'deleted' => $deleted,
+            'id' => $layout_id
+        ], JSON_UNESCAPED_SLASHES);
+        break;
+
     default:
         http_response_code(404);
         echo json_encode([
             'error' => 'Endpoint not found',
             'requested_uri' => $uri,
             'detected_endpoint' => $endpoint,
-            'supported_endpoints' => ['/api/sprites', '/api/save-sprite', '/api/delete-sprite']
+            'supported_endpoints' => ['/api/sprites', '/api/save-sprite', '/api/delete-sprite', '/api/layouts', '/api/save-layout', '/api/delete-layout']
         ]);
         break;
 }
