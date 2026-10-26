@@ -116,59 +116,131 @@
   <!-- Main Work Area -->
   <main class="app-body">
 
-    <!-- Left Sidebar: Sprite Library -->
+    <!-- Left Sidebar: Sprite Library & Placed Assets Outliner -->
     <aside class="sidebar-library">
-      <div class="library-header">
-        <div class="library-title">
-          <h2>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-            Sprite Library
-          </h2>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span id="libraryCount" class="library-count">0 sprites</span>
-            <button id="btnRefreshLibrary" class="btn btn-icon-only" style="width: 24px; height: 24px; padding: 0;" title="Refresh & re-scan assets folder">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="23 4 23 10 17 10"/>
-                <polyline points="1 20 1 14 7 14"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      <!-- Main Sidebar Dual Switcher Tabs -->
+      <div class="sidebar-nav-tabs">
+        <button type="button" id="tabBtnLibrary" class="sidebar-nav-tab active" title="Browse available sprite library">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          Library
+          <span id="tabCountLibrary" class="tab-badge">0</span>
+        </button>
+        <button type="button" id="tabBtnPlaced" class="sidebar-nav-tab" title="View, select, and manage sprites placed in the room">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 11 12 14 22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          Placed
+          <span id="tabCountPlaced" class="tab-badge tab-badge-highlight">0</span>
+        </button>
+      </div>
+
+      <!-- Tab Content 1: Sprite Library View -->
+      <div id="tabContentLibrary" class="sidebar-tab-pane active">
+        <div class="library-header">
+          <div class="library-title">
+            <h2>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
               </svg>
+              Sprite Catalog
+            </h2>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span id="libraryCount" class="library-count">0 sprites</span>
+              <button id="btnRefreshLibrary" class="btn btn-icon-only" style="width: 24px; height: 24px; padding: 0;" title="Refresh & re-scan assets folder">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="search-box">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="spriteSearchInput" placeholder="Filter sprites...">
+          </div>
+
+          <div class="category-tabs" id="categoryTabs">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Scrollable Library Grid -->
+        <div class="library-grid" id="libraryGrid">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Upload Custom Sprites Dropzone -->
+        <div class="library-upload">
+          <div class="upload-dropzone" id="uploadDropzone">
+            <input type="file" id="spriteFileInput" multiple accept="image/*,.svg,.png,.jpg,.jpeg,.gif,.webp" style="display: none;">
+            <input type="file" id="folderFileInput" webkitdirectory directory multiple style="display: none;">
+            <p class="upload-text">
+              <span class="upload-highlight">+ Add custom sprites</span>
+              <br>Drop JPG, PNG, GIF, SVG files here
+            </p>
+            <div style="display: flex; gap: 6px; margin-top: 8px; justify-content: center;">
+              <button type="button" id="btnPickFiles" class="btn" style="height: 24px; font-size: 11px; padding: 0 8px;">Pick Files</button>
+              <button type="button" id="btnPickFolder" class="btn" style="height: 24px; font-size: 11px; padding: 0 8px;" title="Select entire assets folder to import all images at once">Load Folder</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Placed Assets in Room -->
+      <div id="tabContentPlaced" class="sidebar-tab-pane">
+        <div class="placed-header">
+          <div class="placed-title-row">
+            <div class="placed-summary">
+              <h2 style="font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                  <polyline points="2 17 12 22 22 17"/>
+                  <polyline points="2 12 12 17 22 12"/>
+                </svg>
+                Room Assets
+              </h2>
+              <span id="placedCountSummary" class="placed-summary-count">0 items</span>
+            </div>
+            <div class="placed-header-actions">
+              <button id="btnPlacedDepthSort" class="btn btn-sm" style="height: 24px; font-size: 11px; padding: 0 8px;" title="Sort items by isometric depth">
+                Depth Sort
+              </button>
+            </div>
+          </div>
+
+          <div class="search-box" style="margin-bottom: 8px;">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="placedSearchInput" placeholder="Find placed asset...">
+          </div>
+
+          <div class="placed-filter-pills">
+            <button type="button" id="btnFilterAllPlaced" class="placed-pill active">All (<span id="countAllPlaced">0</span>)</button>
+            <button type="button" id="btnFilterInView" class="placed-pill" title="Show only sprites currently visible in the screen view">
+              In View (<span id="countInView">0</span>)
             </button>
           </div>
         </div>
 
-        <div class="search-box">
-          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input type="text" id="spriteSearchInput" placeholder="Filter sprites...">
-        </div>
-
-        <div class="category-tabs" id="categoryTabs">
+        <!-- Scrollable List of Placed Sprites -->
+        <div class="placed-list" id="placedList">
           <!-- Rendered dynamically -->
         </div>
-      </div>
 
-      <!-- Scrollable Library Grid -->
-      <div class="library-grid" id="libraryGrid">
-        <!-- Rendered dynamically -->
-      </div>
-
-      <!-- Upload Custom Sprites Dropzone -->
-      <div class="library-upload">
-        <div class="upload-dropzone" id="uploadDropzone">
-          <input type="file" id="spriteFileInput" multiple accept="image/*,.svg,.png,.jpg,.jpeg,.gif,.webp" style="display: none;">
-          <input type="file" id="folderFileInput" webkitdirectory directory multiple style="display: none;">
-          <p class="upload-text">
-            <span class="upload-highlight">+ Add custom sprites</span>
-            <br>Drop JPG, PNG, GIF, SVG files here
-          </p>
-          <div style="display: flex; gap: 6px; margin-top: 8px; justify-content: center;">
-            <button type="button" id="btnPickFiles" class="btn" style="height: 24px; font-size: 11px; padding: 0 8px;">Pick Files</button>
-            <button type="button" id="btnPickFolder" class="btn" style="height: 24px; font-size: 11px; padding: 0 8px;" title="Select entire assets folder to import all images at once">Load Folder</button>
-          </div>
+        <div class="placed-footer-hint">
+          <span>Click to select &bull; 🎯 to center &bull; 👁 to hide</span>
         </div>
       </div>
     </aside>
@@ -327,7 +399,13 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
             </svg>
-            Remove Sprite
+            Remove from Room
+          </button>
+          <button id="btnDeleteFromLibrary" class="btn" style="background: transparent; color: var(--text-dim); border: 1px dashed var(--border-color); font-size: 11px; margin-top: 4px;" title="Permanently delete this sprite from the library catalog">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Delete from Library Catalog
           </button>
         </div>
       </div>
@@ -453,11 +531,11 @@
   </div>
 
   <!-- Scripts -->
-  <script src="assets/manifest.js"></script>
-  <script src="js/sprites.js"></script>
-  <script src="js/bg_remover.js"></script>
-  <script src="js/canvas.js"></script>
-  <script src="js/app.js"></script>
+  <script src="assets/manifest.js?v=2"></script>
+  <script src="js/sprites.js?v=2"></script>
+  <script src="js/bg_remover.js?v=2"></script>
+  <script src="js/canvas.js?v=2"></script>
+  <script src="js/app.js?v=2"></script>
 </body>
 </html>
 

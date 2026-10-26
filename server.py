@@ -44,6 +44,12 @@ class IsoRoomHTTPHandler(http.server.SimpleHTTPRequestHandler):
             
         super().do_GET()
 
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        super().end_headers()
+
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         
@@ -94,6 +100,47 @@ class IsoRoomHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 return
             except Exception as e:
                 print(f"[Server] Error saving sprite: {e}")
+                err_data = json.dumps({'success': False, 'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(err_data)))
+                self.end_headers()
+                self.wfile.write(err_data)
+                return
+
+        # Delete sprite from assets/ or assets/sprites/
+        if parsed.path == '/api/delete-sprite':
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(content_length).decode('utf-8')
+                payload = json.loads(body)
+                filename = payload.get('filename', '')
+                deleted = False
+                
+                if filename:
+                    filename = os.path.basename(filename)
+                    for root, dirs, files in os.walk('assets'):
+                        if filename in files:
+                            target_file = os.path.join(root, filename)
+                            os.remove(target_file)
+                            print(f"[Server] Deleted sprite from disk: {target_file}")
+                            deleted = True
+                            break
+                    update_manifest_files()
+
+                response_data = json.dumps({
+                    'success': True,
+                    'deleted': deleted,
+                    'filename': filename
+                }).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(response_data)))
+                self.end_headers()
+                self.wfile.write(response_data)
+                return
+            except Exception as e:
+                print(f"[Server] Error deleting sprite: {e}")
                 err_data = json.dumps({'success': False, 'error': str(e)}).encode('utf-8')
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')

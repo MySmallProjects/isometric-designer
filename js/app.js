@@ -8,8 +8,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const canvasEl = document.getElementById('roomCanvas');
   const roomCanvas = new RoomCanvas(canvasEl, library);
 
-  // Inspector State
+  // Application State
   let keepAspectLocked = true;
+  let currentSidebarTab = 'library'; // 'library' | 'placed'
+  let activePlacedFilter = 'all';    // 'all' | 'inView'
+  let placedSearchQuery = '';
+  let activeBgTarget = null;         // CanvasItem or SpriteDef
+  let activeBgImg = null;            // HTMLImageElement
 
   // DOM Elements - Header / Toolbar
   const btnToolSelect = document.getElementById('btnToolSelect');
@@ -26,6 +31,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnClear = document.getElementById('btnClear');
   const btnExport = document.getElementById('btnExport');
 
+  // DOM Elements - Sidebar Switcher & Tabs
+  const tabBtnLibrary = document.getElementById('tabBtnLibrary');
+  const tabBtnPlaced = document.getElementById('tabBtnPlaced');
+  const tabCountLibrary = document.getElementById('tabCountLibrary');
+  const tabCountPlaced = document.getElementById('tabCountPlaced');
+  const tabContentLibrary = document.getElementById('tabContentLibrary');
+  const tabContentPlaced = document.getElementById('tabContentPlaced');
+
   // DOM Elements - Sidebar / Library
   const libraryGrid = document.getElementById('libraryGrid');
   const libraryCount = document.getElementById('libraryCount');
@@ -37,6 +50,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const folderFileInput = document.getElementById('folderFileInput');
   const btnPickFiles = document.getElementById('btnPickFiles');
   const btnPickFolder = document.getElementById('btnPickFolder');
+
+  // DOM Elements - Sidebar / Placed Assets
+  const placedCountSummary = document.getElementById('placedCountSummary');
+  const btnPlacedDepthSort = document.getElementById('btnPlacedDepthSort');
+  const placedSearchInput = document.getElementById('placedSearchInput');
+  const btnFilterAllPlaced = document.getElementById('btnFilterAllPlaced');
+  const btnFilterInView = document.getElementById('btnFilterInView');
+  const countAllPlaced = document.getElementById('countAllPlaced');
+  const countInView = document.getElementById('countInView');
+  const placedList = document.getElementById('placedList');
 
   // DOM Elements - Slide-out Inspector
   const inspectorPanel = document.getElementById('inspectorPanel');
@@ -57,6 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnSendToBack = document.getElementById('btnSendToBack');
   const btnDuplicate = document.getElementById('btnDuplicate');
   const btnRemoveSprite = document.getElementById('btnRemoveSprite');
+  const btnDeleteFromLibrary = document.getElementById('btnDeleteFromLibrary');
   const btnOpenBgRemover = document.getElementById('btnOpenBgRemover');
 
   // DOM Elements - Background Remover Modal
@@ -104,6 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Add default starter room scene so user sees an immediate beautiful room!
   createStarterRoom(library, roomCanvas);
+  renderPlacedList();
 
   // =========================================================================
   // Canvas Callbacks (Selection & Item Changes)
@@ -129,11 +154,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       inspectorPanel.classList.remove('is-open');
     }
+    renderPlacedList(false);
   };
 
   roomCanvas.onItemChange = (item) => {
     if (item && roomCanvas.selectedItem === item) {
       updateInspectorValues(item, false); // Don't steal focus from active inputs
+    }
+    renderPlacedList(false);
+  };
+
+  roomCanvas.onItemsListChange = () => {
+    renderPlacedList();
+  };
+
+  roomCanvas.onViewChange = () => {
+    if (activePlacedFilter === 'inView') {
+      renderPlacedList();
+    } else {
+      updateInViewCount();
     }
   };
 
@@ -148,6 +187,191 @@ document.addEventListener('DOMContentLoaded', async () => {
       inspWidthInput.value = Math.round(item.width);
       inspHeightInput.value = Math.round(item.height);
     }
+  }
+
+  // =========================================================================
+  // Sidebar Dual Tab Navigation & Placed Assets Outliner
+  // =========================================================================
+
+  tabBtnLibrary.addEventListener('click', () => {
+    currentSidebarTab = 'library';
+    tabBtnLibrary.classList.add('active');
+    tabBtnPlaced.classList.remove('active');
+    tabContentLibrary.classList.add('active');
+    tabContentPlaced.classList.remove('active');
+  });
+
+  tabBtnPlaced.addEventListener('click', () => {
+    currentSidebarTab = 'placed';
+    tabBtnPlaced.classList.add('active');
+    tabBtnLibrary.classList.remove('active');
+    tabContentPlaced.classList.add('active');
+    tabContentLibrary.classList.remove('active');
+    renderPlacedList();
+  });
+
+  btnFilterAllPlaced.addEventListener('click', () => {
+    activePlacedFilter = 'all';
+    btnFilterAllPlaced.classList.add('active');
+    btnFilterInView.classList.remove('active');
+    renderPlacedList();
+  });
+
+  btnFilterInView.addEventListener('click', () => {
+    activePlacedFilter = 'inView';
+    btnFilterInView.classList.add('active');
+    btnFilterAllPlaced.classList.remove('active');
+    renderPlacedList();
+  });
+
+  placedSearchInput.addEventListener('input', (e) => {
+    placedSearchQuery = e.target.value.trim().toLowerCase();
+    renderPlacedList();
+  });
+
+  btnPlacedDepthSort.addEventListener('click', () => {
+    roomCanvas.autoSortDepth();
+    renderPlacedList();
+    showToast('Placed assets sorted by isometric depth');
+  });
+
+  function updateInViewCount() {
+    const inViewCount = roomCanvas.items.filter(item => roomCanvas.isItemInView(item)).length;
+    countInView.textContent = inViewCount;
+    placedCountSummary.textContent = `${roomCanvas.items.length} items (${inViewCount} in view)`;
+    tabCountPlaced.textContent = roomCanvas.items.length;
+    tabCountLibrary.textContent = library.sprites.length;
+    countAllPlaced.textContent = roomCanvas.items.length;
+  }
+
+  function renderPlacedList(rebuildDom = true) {
+    updateInViewCount();
+
+    // If placed tab is not active, we don't need to rebuild cards unless requested
+    if (currentSidebarTab !== 'placed' && !rebuildDom) return;
+
+    // Filter items
+    const filtered = roomCanvas.items.filter(item => {
+      if (activePlacedFilter === 'inView' && !roomCanvas.isItemInView(item)) {
+        return false;
+      }
+      if (placedSearchQuery) {
+        const matchesName = item.name && item.name.toLowerCase().includes(placedSearchQuery);
+        const matchesFilename = item.filename && item.filename.toLowerCase().includes(placedSearchQuery);
+        if (!matchesName && !matchesFilename) return false;
+      }
+      return true;
+    });
+
+    // Sort by layer descending (topmost on canvas appears at top of list)
+    filtered.sort((a, b) => b.zIndex - a.zIndex);
+
+    placedList.innerHTML = '';
+
+    if (filtered.length === 0) {
+      const emptyMsg = roomCanvas.items.length === 0
+        ? 'No sprites placed in room yet.<br><span style="color:var(--primary); cursor:pointer;" id="linkSwitchToLibrary">Go to Library tab to add items.</span>'
+        : (activePlacedFilter === 'inView' ? 'No placed sprites currently visible in the screen view.<br><span style="font-size:11px; color:var(--text-muted);">Pan or zoom canvas to reveal assets.</span>' : 'No placed sprites match search query.');
+      
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'placed-empty-box';
+      emptyDiv.innerHTML = emptyMsg;
+      const link = emptyDiv.querySelector('#linkSwitchToLibrary');
+      if (link) {
+        link.addEventListener('click', () => tabBtnLibrary.click());
+      }
+      placedList.appendChild(emptyDiv);
+      return;
+    }
+
+    filtered.forEach(item => {
+      const card = document.createElement('div');
+      card.className = `placed-item-card ${item === roomCanvas.selectedItem ? 'is-selected' : ''} ${item.hidden ? 'is-hidden' : ''}`;
+      card.title = `${item.name} (${item.filename})\nClick to select & edit in Inspector`;
+
+      const isHidden = item.hidden;
+
+      card.innerHTML = `
+        <div class="placed-item-thumb">
+          <img src="${item.src}" alt="${item.name}">
+        </div>
+        <div class="placed-item-info">
+          <div class="placed-item-title">${item.name}</div>
+          <div class="placed-item-details">${Math.round(item.width)}×${Math.round(item.height)} px &bull; (${Math.round(item.x)}, ${Math.round(item.y)})</div>
+        </div>
+        <div class="placed-item-actions">
+          <button class="placed-action-btn btn-vis ${isHidden ? 'active-hidden' : ''}" title="${isHidden ? 'Show sprite' : 'Hide sprite'}">
+            ${isHidden ? `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            ` : `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            `}
+          </button>
+          <button class="placed-action-btn btn-focus" title="Center camera view on this sprite">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="22" y1="12" x2="18" y2="12"/>
+              <line x1="6" y1="12" x2="2" y2="12"/>
+              <line x1="12" y1="6" x2="12" y2="2"/>
+              <line x1="12" y1="22" x2="12" y2="18"/>
+            </svg>
+          </button>
+          <button class="placed-action-btn btn-trash" title="Remove sprite from room">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      `;
+
+      // Select item on click
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.placed-action-btn')) return;
+        roomCanvas.selectItem(item);
+      });
+
+      // Hover preview highlight on canvas
+      card.addEventListener('mouseenter', () => {
+        roomCanvas.setHoveredItem(item);
+      });
+      card.addEventListener('mouseleave', () => {
+        roomCanvas.setHoveredItem(null);
+      });
+
+      // Visibility toggle
+      const btnVis = card.querySelector('.btn-vis');
+      btnVis.addEventListener('click', (e) => {
+        e.stopPropagation();
+        roomCanvas.toggleItemVisibility(item);
+        renderPlacedList();
+      });
+
+      // Focus / Center button
+      const btnFocus = card.querySelector('.btn-focus');
+      btnFocus.addEventListener('click', (e) => {
+        e.stopPropagation();
+        roomCanvas.centerOnItem(item);
+        roomCanvas.selectItem(item);
+        showToast(`Centered on "${item.name}"`);
+      });
+
+      // Delete button
+      const btnTrash = card.querySelector('.btn-trash');
+      btnTrash.addEventListener('click', (e) => {
+        e.stopPropagation();
+        roomCanvas.removeItem(item);
+        showToast(`Removed "${item.name}"`);
+      });
+
+      placedList.appendChild(card);
+    });
   }
 
   // =========================================================================
@@ -288,12 +512,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  btnDeleteFromLibrary.addEventListener('click', async () => {
+    if (!roomCanvas.selectedItem) return;
+    const item = roomCanvas.selectedItem;
+    const spriteId = item.spriteId;
+    const name = item.name;
+    const filename = item.filename;
+
+    if (confirm(`Permanently delete "${name}" (${filename}) from the sprite library catalog?`)) {
+      await library.deleteSprite(spriteId);
+      showToast(`Deleted "${name}" from library`);
+    }
+  });
+
   // =========================================================================
   // Background Remover Modal Logic
   // =========================================================================
-
-  let activeBgTarget = null; // CanvasItem or SpriteDef
-  let activeBgImg = null;    // HTMLImageElement
 
   function rgbToHex(r, g, b) {
     return '#' + [r, g, b].map(x => {
@@ -627,6 +861,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span class="sprite-filename">${sprite.filename}</span>
           <span class="sprite-dim-tag">${sprite.width} × ${sprite.height} px</span>
         </div>
+        <button class="sprite-del-lib-btn" title="Delete sprite from library catalog">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
         <button class="sprite-wand-btn" title="Remove background & make transparent">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M15 4V2m0 16v-2m6-6h-2M4 12H2m15.5-5.5l-1.5 1.5M6 18l-1.5 1.5M14 9l-9 9 2 2 9-9z"/>
@@ -638,6 +878,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           </svg>
         </div>
       `;
+
+      // Delete from library button click
+      const delLibBtn = card.querySelector('.sprite-del-lib-btn');
+      delLibBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm(`Delete "${sprite.name}" (${sprite.filename}) from the sprite library?`)) {
+          await library.deleteSprite(sprite.id);
+          showToast(`Deleted "${sprite.name}" from library`);
+        }
+      });
 
       // Wand button click to remove background
       const wandBtn = card.querySelector('.sprite-wand-btn');

@@ -52,14 +52,60 @@ class RoomCanvas {
     this.handleHitRadius = 12;
 
     // Callbacks
+    this.hoveredItem = null;
     this.onSelectionChange = null;
     this.onItemChange = null;
     this.onToolChange = null;
+    this.onItemsListChange = null;
+    this.onViewChange = null;
 
     this.initCanvasSize();
     this.bindEvents();
     this.centerView();
     this.requestRender();
+  }
+
+  notifyListChange() {
+    if (this.onItemsListChange) {
+      this.onItemsListChange(this.items);
+    }
+  }
+
+  setHoveredItem(item) {
+    if (this.hoveredItem !== item) {
+      this.hoveredItem = item;
+      this.requestRender();
+    }
+  }
+
+  isItemInView(item) {
+    if (!item) return false;
+    const topLeft = this.screenToWorld(0, 0);
+    const bottomRight = this.screenToWorld(this.displayWidth, this.displayHeight);
+    return (
+      item.x + item.width >= topLeft.x &&
+      item.x <= bottomRight.x &&
+      item.y + item.height >= topLeft.y &&
+      item.y <= bottomRight.y
+    );
+  }
+
+  centerOnItem(item) {
+    if (!item) return;
+    this.view.x = (this.displayWidth / 2) - (item.x + item.width / 2) * this.view.scale;
+    this.view.y = (this.displayHeight / 2) - (item.y + item.height / 2) * this.view.scale;
+    this.requestRender();
+    if (this.onViewChange) this.onViewChange(this.view);
+  }
+
+  toggleItemVisibility(item) {
+    if (!item) return;
+    item.hidden = !item.hidden;
+    if (item.hidden && this.selectedItem === item) {
+      this.selectItem(null);
+    }
+    this.requestRender();
+    this.notifyListChange();
   }
 
   setTool(tool) {
@@ -191,6 +237,7 @@ class RoomCanvas {
     this.items.push(item);
     this.selectItem(item);
     this.requestRender();
+    this.notifyListChange();
     return item;
   }
 
@@ -207,6 +254,7 @@ class RoomCanvas {
       }
       this.requestRender();
       if (this.onItemChange) this.onItemChange(null);
+      this.notifyListChange();
     }
   }
 
@@ -215,6 +263,7 @@ class RoomCanvas {
     this.items = [];
     this.selectItem(null);
     this.requestRender();
+    this.notifyListChange();
   }
 
   // Select/Deselect item
@@ -258,6 +307,7 @@ class RoomCanvas {
   hitTestItem(worldPt) {
     const sorted = [...this.items].sort((a, b) => b.zIndex - a.zIndex);
     for (const item of sorted) {
+      if (item.hidden) continue;
       if (
         worldPt.x >= item.x &&
         worldPt.x <= item.x + item.width &&
@@ -282,6 +332,7 @@ class RoomCanvas {
       item.zIndex = index;
     });
     this.requestRender();
+    this.notifyListChange();
   }
 
   // Layer ordering
@@ -336,6 +387,7 @@ class RoomCanvas {
     sorted.forEach((item, idx) => {
       item.zIndex = idx;
     });
+    this.notifyListChange();
   }
 
   // Set Dimensions explicitly (from inspector inputs)
@@ -355,6 +407,7 @@ class RoomCanvas {
     if (this.onItemChange) {
       this.onItemChange(item);
     }
+    this.notifyListChange();
   }
 
   duplicateSelectedItem() {
@@ -379,6 +432,7 @@ class RoomCanvas {
     this.items.push(newItem);
     this.selectItem(newItem);
     this.requestRender();
+    this.notifyListChange();
   }
 
   // Event Listeners
@@ -568,6 +622,7 @@ class RoomCanvas {
       this.view.y += dy;
       this.interaction.panStart = { x: e.clientX, y: e.clientY };
       this.requestRender();
+      if (this.onViewChange) this.onViewChange(this.view);
       return;
     }
 
@@ -595,6 +650,7 @@ class RoomCanvas {
 
       this.requestRender();
       if (this.onItemChange) this.onItemChange(this.selectedItem);
+      this.notifyListChange();
       return;
     }
 
@@ -667,6 +723,7 @@ class RoomCanvas {
 
       this.requestRender();
       if (this.onItemChange) this.onItemChange(item);
+      this.notifyListChange();
       return;
     }
 
@@ -718,17 +775,20 @@ class RoomCanvas {
       this.view.y = mouseY - (mouseY - this.view.y) * (newScale / this.view.scale);
       this.view.scale = newScale;
       this.requestRender();
+      if (this.onViewChange) this.onViewChange(this.view);
     }
   }
 
   setZoom(scale) {
     this.view.scale = Math.min(this.view.maxScale, Math.max(this.view.minScale, scale));
     this.requestRender();
+    if (this.onViewChange) this.onViewChange(this.view);
   }
 
   resetZoom() {
     this.view.scale = 1.0;
     this.centerView();
+    if (this.onViewChange) this.onViewChange(this.view);
   }
 
   requestRender() {
@@ -765,11 +825,25 @@ class RoomCanvas {
       this.drawItem(ctx, item);
     }
 
-    // 4. Draw selection handles for selected item
-    if (this.selectedItem) {
+    // 4. Draw temporary hover highlight (e.g. from hovering in Placed Assets list)
+    if (this.hoveredItem && this.hoveredItem !== this.selectedItem && !this.hoveredItem.hidden) {
+      this.drawHoverOutline(ctx, this.hoveredItem);
+    }
+
+    // 5. Draw selection handles for selected item
+    if (this.selectedItem && !this.selectedItem.hidden) {
       this.drawSelection(ctx, this.selectedItem);
     }
 
+    ctx.restore();
+  }
+
+  drawHoverOutline(ctx, item) {
+    ctx.save();
+    ctx.strokeStyle = '#06b6d4';
+    ctx.lineWidth = 2 / this.view.scale;
+    ctx.setLineDash([4 / this.view.scale, 4 / this.view.scale]);
+    ctx.strokeRect(item.x, item.y, item.width, item.height);
     ctx.restore();
   }
 
@@ -854,6 +928,7 @@ class RoomCanvas {
   }
 
   drawItem(ctx, item) {
+    if (item.hidden) return;
     const img = this.library.getImage(item.spriteId);
     if (!img) {
       ctx.save();
@@ -928,13 +1003,14 @@ class RoomCanvas {
 
   // Export room canvas as PNG
   exportImage() {
-    if (this.items.length === 0) {
-      alert('Canvas is empty. Add some isometric sprites first!');
+    const visibleItems = this.items.filter(i => !i.hidden);
+    if (visibleItems.length === 0) {
+      alert('No visible sprites to export.');
       return;
     }
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const item of this.items) {
+    for (const item of visibleItems) {
       minX = Math.min(minX, item.x);
       minY = Math.min(minY, item.y);
       maxX = Math.max(maxX, item.x + item.width);
@@ -957,7 +1033,7 @@ class RoomCanvas {
 
     offCtx.clearRect(0, 0, outW, outH);
 
-    const sorted = [...this.items].sort((a, b) => a.zIndex - b.zIndex);
+    const sorted = [...visibleItems].sort((a, b) => a.zIndex - b.zIndex);
     for (const item of sorted) {
       const img = this.library.getImage(item.spriteId);
       if (img) {

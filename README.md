@@ -10,6 +10,19 @@ A lightweight, responsive web application for creating isometric room scenes usi
   - Category tabs (`All`, `Floors`, `Walls`, `Furniture`, `Storage`, `Decor`, `Lighting`, `Custom`).
   - **Click to Add** or **Drag-and-Drop** directly onto the canvas workspace.
   - **Upload Custom Sprites**: Drag & drop or pick image files (PNG, SVG, JPG, WebP) directly into the library.
+  - **Delete Sprite from Library (New)**: Delete unwanted or uploaded sprites directly from the catalog using the 🗑 trash icon on any sprite card or via the Inspector panel. Deletes from disk when running `server.py` and updates manifests.
+
+- **Dual-Tab Sidebar (Library & Placed Assets Outliner)**:
+  - **📦 Sprite Library Tab**: Browse catalog, search, filter by category, drag/click to place, and upload custom sprites.
+  - **📋 Placed Assets Tab**:
+    - **In Current View Filter**: Toggle between "All Placed" and "In View" to see only assets inside your current screen viewport.
+    - **Interactive List**: Displays thumbnail, sprite name, dimensions, canvas coordinates, and layer depth.
+    - **Click to Select**: Selecting an item highlights it on canvas and opens its details in the right-side Inspector.
+    - **Hover Highlight**: Hovering over an item draws a cyan preview outline on the canvas.
+    - **👁 Visibility Toggle**: Hide or show individual sprites on the canvas (useful when arranging rugs or tiles underneath furniture).
+    - **🎯 Focus / Center (Target)**: Click to smoothly center the camera viewport directly onto that asset.
+    - **🗑 Quick Delete**: Remove an item from the canvas directly from the list.
+    - **Depth Sort**: Re-order placed assets based on isometric depth.
 
 - **Grid Locking & Configurable Grid Size**:
   - Grid size input (pixels) to change the snap step size (e.g. 16, 32, 64, 128px).
@@ -60,14 +73,25 @@ A lightweight, responsive web application for creating isometric room scenes usi
 
 ## Getting Started
 
-### Option 1: Running the Live Development Server (Recommended)
-Run the built-in development server, which automatically detects newly added images in `assets/` and `assets/sprites/`:
+### Option 1: Running with PHP + Nginx (Production / Staging)
+A complete drop-in PHP backend (`api.php`) and configuration sample (`nginx.conf.example`) are included.
+1. Place the project files in your web root (e.g. `/var/www/isoroom`).
+2. Ensure the web server has write permission to `assets/`:
+   ```bash
+   sudo chown -R www-data:www-data /var/www/isoroom/assets
+   sudo chmod -R 775 /var/www/isoroom/assets
+   ```
+3. Copy or adapt [nginx.conf.example](file:///home/user/Documents/image-layout/nginx.conf.example) to your Nginx configuration.
+4. Reload Nginx (`sudo systemctl reload nginx`). All features (live image discovery, saving transparent PNGs, library deletion) will work seamlessly!
+
+### Option 2: Running the Python Dev Server
+Run the built-in development server:
 ```bash
 python3 server.py
 ```
-Then open `http://localhost:8000` in your browser. Whenever you add new `.png`, `.jpg`, `.jpeg`, `.gif`, or `.svg` files to `assets/` or `assets/sprites/`, simply click the ↻ **Refresh** button in the library header!
+Then open `http://localhost:8000` in your browser. Whenever you add new `.png`, `.jpg`, `.jpeg`, `.gif`, or `.svg` files to `assets/`, simply click the ↻ **Refresh** button in the library header!
 
-### Option 2: Direct File Mode (`file:///`)
+### Option 3: Direct File Mode (`file:///`)
 You can open `index.html` directly in your browser without a server:
 - If you copy files directly into the `assets` folder on your disk, run `python3 update_manifest.py` once to update the manifest file so the browser knows they are there.
 - Or use the **"Load Folder"** / **"Pick Files"** button in the app's sidebar to import images directly with one click!

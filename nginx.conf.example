@@ -1,0 +1,49 @@
+# Example Nginx Server Block for IsoRoom Studio (PHP + Nginx)
+# Place this in /etc/nginx/sites-available/isoroom (or conf.d/) and symlink to sites-enabled/
+
+server {
+    listen 80;
+    server_name localhost your-domain.com; # Update with your domain or IP
+
+    root /var/www/isoroom; # Update with your actual project directory path
+    index index.html index.php;
+
+    # IMPORTANT: Allow larger payloads for transparent sprite base64 saves (default is 1M)
+    client_max_body_size 25M;
+
+    # Static assets (HTML, JS, CSS, PNG, JPG, SVG, WebP)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API Routing: routes /api/sprites, /api/save-sprite, /api/delete-sprite to api.php
+    location /api/ {
+        try_files $uri $uri/ /api.php?$query_string;
+    }
+
+    # PHP-FPM FastCGI Handler
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        
+        # Adjust socket path according to your PHP version:
+        # e.g., unix:/var/run/php/php8.2-fpm.sock, php8.1-fpm.sock, or 127.0.0.1:9000
+        fastcgi_pass unix:/var/run/php/php-fpm.sock;
+
+        fastcgi_index index.php;
+        fastcgi_read_timeout 60s;
+    }
+
+    # Disable access logs for static images and set caching headers
+    location ~* \.(jpg|jpeg|png|gif|ico|svg|webp)$ {
+        expires 7d;
+        add_header Cache-Control "public, no-transform";
+        try_files $uri =404;
+    }
+
+    # Block access to hidden files (.git, .env, etc.)
+    location ~ /\. {
+        deny all;
+    }
+}
+

@@ -349,6 +349,31 @@ class SpriteLibrary {
     this.notify();
     return files.length;
   }
+
+  // Delete a sprite from the library (and from disk if server is active)
+  async deleteSprite(spriteId) {
+    const idx = this.sprites.findIndex(s => s.id === spriteId);
+    if (idx === -1) return false;
+    const sprite = this.sprites[idx];
+
+    this.sprites.splice(idx, 1);
+    this.loadedImages.delete(spriteId);
+
+    if (sprite.filename && !sprite.src.startsWith('data:')) {
+      try {
+        await fetch('/api/delete-sprite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: sprite.filename })
+        });
+      } catch (e) {
+        // Offline / file:// mode
+      }
+    }
+
+    this.notify();
+    return true;
+  }
 }
 
 function anyWord(str, words) {
