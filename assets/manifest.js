@@ -45,6 +45,17 @@ window.ASSETS_MANIFEST = [
     ]
   },
   {
+    "id": "bookshelf4_transparent",
+    "name": "Bookshelf4 Transparent",
+    "category": "Storage",
+    "filename": "bookshelf4_transparent.png",
+    "src": "assets/sprites/bookshelf4_transparent.png",
+    "tags": [
+      "storage",
+      "png"
+    ]
+  },
+  {
     "id": "bookshelf5",
     "name": "Bookshelf5",
     "category": "Storage",

@@ -601,11 +601,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function hexToRgb(hex) {
-    hex = hex.replace(/^#/, '');
+    if (!hex) return { r: 255, g: 255, b: 255 };
+    hex = String(hex).replace(/^#/, '');
     if (hex.length === 3) {
       hex = hex.split('').map(c => c + c).join('');
     }
     const num = parseInt(hex, 16);
+    if (isNaN(num)) return { r: 255, g: 255, b: 255 };
     return {
       r: (num >> 16) & 255,
       g: (num >> 8) & 255,
@@ -623,9 +625,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!target) return;
     activeBgTarget = target;
 
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    // Check if the image is already loaded in memory
+    const targetId = target.spriteId || target.id;
+    let existingImg = library ? library.getImage(targetId) : null;
+
+    function onImageReady(img) {
       activeBgImg = img;
       bgOriginalImg.src = img.src;
 
@@ -641,11 +645,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       updateBgPreview();
       bgRemoverModal.classList.add('is-active');
-    };
-    img.onerror = () => {
-      showToast('Error loading image for background removal');
-    };
-    img.src = target.src;
+    }
+
+    if (existingImg && existingImg.complete && (existingImg.naturalWidth || existingImg.width) > 0) {
+      onImageReady(existingImg);
+    } else {
+      const src = target.src || (target.filename ? `assets/${target.filename}` : '');
+      if (!src) {
+        showToast('Image source not found');
+        return;
+      }
+
+      const img = new Image();
+      // Only set crossOrigin for external http(s) URLs pointing to a foreign origin
+      if (src.startsWith('http') && typeof window !== 'undefined' && window.location && !src.startsWith(window.location.origin)) {
+        img.crossOrigin = 'anonymous';
+      }
+
+      img.onload = () => onImageReady(img);
+      img.onerror = () => {
+        // Fallback retry without crossOrigin in case CORS header was rejected
+        if (img.crossOrigin) {
+          const fallback = new Image();
+          fallback.onload = () => onImageReady(fallback);
+          fallback.onerror = () => showToast('Error loading image for background removal');
+          fallback.src = src;
+        } else {
+          showToast('Error loading image for background removal');
+        }
+      };
+      img.src = src;
+    }
   }
 
   function closeBgModal() {
@@ -663,23 +693,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updateBgPreview() {
     if (!activeBgImg) return;
 
-    const targetColor = hexToRgb(bgColorPicker.value);
-    const tolerance = Number(bgTolerance.value);
-    const mode = document.querySelector('input[name="bgMode"]:checked').value;
-    const smoothEdges = bgSmoothEdges.checked;
+    try {
+      const targetColor = hexToRgb(bgColorPicker.value);
+      const tolerance = Number(bgTolerance.value) || 20;
+      const modeRadio = document.querySelector('input[name="bgMode"]:checked');
+      const mode = modeRadio ? modeRadio.value : 'contiguous';
+      const smoothEdges = bgSmoothEdges.checked;
 
-    const processedCanvas = BackgroundRemover.process(activeBgImg, {
-      targetColor,
-      tolerance,
-      mode,
-      smoothEdges
-    });
+      const processedCanvas = BackgroundRemover.process(activeBgImg, {
+        targetColor,
+        tolerance,
+        mode,
+        smoothEdges
+      });
 
-    bgResultCanvas.width = processedCanvas.width;
-    bgResultCanvas.height = processedCanvas.height;
-    const ctx = bgResultCanvas.getContext('2d');
-    ctx.clearRect(0, 0, bgResultCanvas.width, bgResultCanvas.height);
-    ctx.drawImage(processedCanvas, 0, 0);
+      bgResultCanvas.width = processedCanvas.width || (activeBgImg.naturalWidth || activeBgImg.width) || 64;
+      bgResultCanvas.height = processedCanvas.height || (activeBgImg.naturalHeight || activeBgImg.height) || 64;
+      const ctx = bgResultCanvas.getContext('2d');
+      ctx.clearRect(0, 0, bgResultCanvas.width, bgResultCanvas.height);
+      ctx.drawImage(processedCanvas, 0, 0);
+    } catch (err) {
+      console.error('Error updating background removal preview:', err);
+    }
   }
 
   bgTolerance.addEventListener('input', () => {
@@ -703,24 +738,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   bgOriginalImg.addEventListener('click', (e) => {
     if (!activeBgImg) return;
     const rect = bgOriginalImg.getBoundingClientRect();
-    const scaleX = (activeBgImg.naturalWidth || activeBgImg.width) / rect.width;
-    const scaleY = (activeBgImg.naturalHeight || activeBgImg.height) / rect.height;
+    if (!rect.width || !rect.height) return;
 
-    const px = Math.min((activeBgImg.naturalWidth || activeBgImg.width) - 1, Math.max(0, Math.floor((e.clientX - rect.left) * scaleX)));
-    const py = Math.min((activeBgImg.naturalHeight || activeBgImg.height) - 1, Math.max(0, Math.floor((e.clientY - rect.top) * scaleY)));
+    const natW = activeBgImg.naturalWidth || activeBgImg.width || 1;
+    const natH = activeBgImg.naturalHeight || activeBgImg.height || 1;
+    const scaleX = natW / rect.width;
+    const scaleY = natH / rect.height;
+
+    const px = Math.min(natW - 1, Math.max(0, Math.floor((e.clientX - rect.left) * scaleX)));
+    const py = Math.min(natH - 1, Math.max(0, Math.floor((e.clientY - rect.top) * scaleY)));
 
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = activeBgImg.naturalWidth || activeBgImg.width;
-    tempCanvas.height = activeBgImg.naturalHeight || activeBgImg.height;
+    tempCanvas.width = natW;
+    tempCanvas.height = natH;
     const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(activeBgImg, 0, 0);
-    const pixel = tempCtx.getImageData(px, py, 1, 1).data;
+    try {
+      tempCtx.drawImage(activeBgImg, 0, 0);
+      const pixel = tempCtx.getImageData(px, py, 1, 1).data;
 
-    const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
-    bgColorPicker.value = hex;
-    bgColorHex.textContent = hex;
-    updateBgPreview();
-    showToast(`Sampled color: ${hex}`);
+      const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
+      bgColorPicker.value = hex;
+      bgColorHex.textContent = hex;
+      updateBgPreview();
+      showToast(`Sampled color: ${hex}`);
+    } catch (err) {
+      console.error('Could not sample pixel color:', err);
+    }
   });
 
   // Apply Transparent Background to sprite

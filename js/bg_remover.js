@@ -23,14 +23,27 @@ class BackgroundRemover {
     const height = sourceImage.naturalHeight || sourceImage.height;
 
     const canvas = document.createElement('canvas');
+    if (!width || !height) return canvas;
+
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
 
     // Draw source image onto canvas
-    ctx.drawImage(sourceImage, 0, 0, width, height);
+    try {
+      ctx.drawImage(sourceImage, 0, 0, width, height);
+    } catch (e) {
+      console.error('Error drawing image onto canvas:', e);
+      return canvas;
+    }
 
-    const imgData = ctx.getImageData(0, 0, width, height);
+    let imgData;
+    try {
+      imgData = ctx.getImageData(0, 0, width, height);
+    } catch (e) {
+      console.error('SecurityError: Cannot read pixel data from image (CORS restriction):', e);
+      return canvas;
+    }
     const data = imgData.data;
 
     // 1. Auto-detect target color if not provided (sample 4 corners)
@@ -167,18 +180,36 @@ class BackgroundRemover {
   }
 
   /**
-   * Sample the average corner color of an image
+   * Sample the corner color of an image (checks non-transparent corners)
    */
   static getCornerColor(sourceImage) {
     const width = sourceImage.naturalWidth || sourceImage.width;
     const height = sourceImage.naturalHeight || sourceImage.height;
+    if (!width || !height) return { r: 255, g: 255, b: 255 };
+
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(sourceImage, 0, 0, width, height);
-    const p = ctx.getImageData(0, 0, 1, 1).data;
-    return { r: p[0], g: p[1], b: p[2] };
+    try {
+      ctx.drawImage(sourceImage, 0, 0, width, height);
+      const corners = [
+        [0, 0],
+        [width - 1, 0],
+        [0, height - 1],
+        [width - 1, height - 1]
+      ];
+      for (const [cx, cy] of corners) {
+        const p = ctx.getImageData(cx, cy, 1, 1).data;
+        if (p[3] > 20) { // Found a solid pixel at corner
+          return { r: p[0], g: p[1], b: p[2] };
+        }
+      }
+      return { r: 255, g: 255, b: 255 };
+    } catch (e) {
+      console.warn('Could not read pixel data for corner color:', e);
+      return { r: 255, g: 255, b: 255 };
+    }
   }
 }
 
