@@ -79,6 +79,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const libraryGrid = document.getElementById('libraryGrid');
   const libraryCount = document.getElementById('libraryCount');
   const btnRefreshLibrary = document.getElementById('btnRefreshLibrary');
+  const packSelect = document.getElementById('packSelect');
+  const btnNewPack = document.getElementById('btnNewPack');
   const spriteSearchInput = document.getElementById('spriteSearchInput');
   const categoryTabs = document.getElementById('categoryTabs');
   const uploadDropzone = document.getElementById('uploadDropzone');
@@ -159,6 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Preload and Auto-discover Sprite Library
   await library.autoDiscoverAssets();
   await library.preloadAll();
+  renderPackSelect();
   renderCategoryTabs();
   renderLibrary();
 
@@ -964,7 +967,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           filename: outName,
-          dataUrl: dataUrl
+          dataUrl: dataUrl,
+          pack: activeBgTarget.pack || (library.selectedPack !== 'All' ? library.selectedPack : 'Core')
         })
       });
 
@@ -1514,6 +1518,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Sprite Library UI & Interactions
   // =========================================================================
 
+  function renderPackSelect() {
+    if (!packSelect) return;
+    const packs = library.getPacks();
+    const currentVal = library.selectedPack;
+
+    packSelect.innerHTML = '';
+    packs.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = p.name === 'All Packs'
+        ? `📦 All Packs (${p.count})`
+        : `📁 ${p.name} (${p.count})`;
+      if (p.name === currentVal || (currentVal === 'All' && p.name === 'All Packs')) {
+        opt.selected = true;
+      }
+      packSelect.appendChild(opt);
+    });
+  }
+
+  if (packSelect) {
+    packSelect.addEventListener('change', (e) => {
+      library.selectedPack = e.target.value === 'All Packs' ? 'All' : e.target.value;
+      renderLibrary();
+    });
+  }
+
+  if (btnNewPack) {
+    btnNewPack.addEventListener('click', () => {
+      openPromptModal({
+        title: 'Create Sprite Pack Folder',
+        label: 'Pack Name (Folder)',
+        hint: 'e.g. Modern Living, Retro Cyber, Victorian',
+        initialValue: '',
+        confirmText: 'Create Pack',
+        onConfirm: async (val) => {
+          if (!val || !val.trim()) return;
+          const created = await library.createPack(val.trim());
+          if (created) {
+            library.selectedPack = created;
+            renderPackSelect();
+            renderCategoryTabs();
+            renderLibrary();
+            showToast(`Created pack folder: "${created}"`);
+          }
+        }
+      });
+    });
+  }
+
   function renderCategoryTabs() {
     categoryTabs.innerHTML = '';
     library.categories.forEach(cat => {
@@ -1543,11 +1596,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    const showPackBadge = library.selectedPack === 'All' || library.selectedPack === 'All Packs';
+
     sprites.forEach(sprite => {
       const card = document.createElement('div');
       card.className = 'sprite-card';
-      card.title = `Click to add or drag to canvas\n${sprite.filename} (${sprite.width}×${sprite.height})`;
+      card.title = `Click to add or drag to canvas\n${sprite.filename} (${sprite.width}×${sprite.height})\nPack: ${sprite.pack || 'Core'}`;
       card.draggable = true;
+
+      const packBadgeHtml = (showPackBadge && sprite.pack && sprite.pack !== 'Core')
+        ? `<span class="sprite-pack-badge" title="Pack: ${sprite.pack}">${sprite.pack}</span>`
+        : '';
 
       card.innerHTML = `
         <div class="sprite-thumb-wrap">
@@ -1556,7 +1615,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="sprite-meta">
           <span class="sprite-name">${sprite.name}</span>
           <span class="sprite-filename">${sprite.filename}</span>
-          <span class="sprite-dim-tag">${sprite.width} × ${sprite.height} px</span>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 2px;">
+            <span class="sprite-dim-tag">${sprite.width} × ${sprite.height} px</span>
+            ${packBadgeHtml}
+          </div>
         </div>
         <button class="sprite-del-lib-btn" title="Delete sprite from library catalog">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -1615,6 +1677,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   library.onChange(() => {
+    renderPackSelect();
     renderCategoryTabs();
     renderLibrary();
   });
@@ -1625,6 +1688,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnRefreshLibrary.style.transition = 'transform 0.5s ease';
     await library.autoDiscoverAssets();
     await library.preloadAll();
+    renderPackSelect();
     renderCategoryTabs();
     renderLibrary();
     setTimeout(() => {

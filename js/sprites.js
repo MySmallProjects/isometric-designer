@@ -152,6 +152,8 @@ class SpriteLibrary {
     this.loadedImages = new Map(); // id -> HTMLImageElement
     this.categories = ['All', 'Floors', 'Walls', 'Furniture', 'Storage', 'Decor', 'Lighting', 'Custom'];
     this.selectedCategory = 'All';
+    this.selectedPack = 'All';
+    this.customPacks = new Set();
     this.searchQuery = '';
     this.listeners = [];
 
@@ -162,9 +164,17 @@ class SpriteLibrary {
   initSprites() {
     // If manifest was loaded by <script src="assets/manifest.js">, use it!
     if (window.ASSETS_MANIFEST && Array.isArray(window.ASSETS_MANIFEST) && window.ASSETS_MANIFEST.length > 0) {
-      this.sprites = [...window.ASSETS_MANIFEST];
+      this.sprites = window.ASSETS_MANIFEST.map(s => ({
+        ...s,
+        pack: s.pack || 'Core',
+        packId: s.packId || 'core'
+      }));
     } else {
-      this.sprites = [...DEFAULT_SPRITES];
+      this.sprites = DEFAULT_SPRITES.map(s => ({
+        ...s,
+        pack: s.pack || 'Core',
+        packId: s.packId || 'core'
+      }));
     }
   }
 
@@ -218,7 +228,11 @@ class SpriteLibrary {
     for (const item of newSprites) {
       const key = item.filename.toLowerCase();
       if (!existingMap.has(key)) {
-        this.sprites.push(item);
+        this.sprites.push({
+          ...item,
+          pack: item.pack || 'Core',
+          packId: item.packId || 'core'
+        });
       } else {
         // Update source and metadata if needed
         const existing = existingMap.get(key);
@@ -226,8 +240,60 @@ class SpriteLibrary {
         if (item.category && item.category !== 'Decor') {
           existing.category = item.category;
         }
+        if (item.pack) {
+          existing.pack = item.pack;
+          existing.packId = item.packId || item.pack.toLowerCase().replace(/[\s-]/g, '_');
+        }
       }
     }
+  }
+
+  getPacks() {
+    const packMap = new Map();
+    for (const s of this.sprites) {
+      const p = s.pack || 'Core';
+      packMap.set(p, (packMap.get(p) || 0) + 1);
+    }
+    for (const cp of this.customPacks) {
+      if (!packMap.has(cp)) {
+        packMap.set(cp, 0);
+      }
+    }
+
+    const list = [];
+    for (const [name, count] of packMap.entries()) {
+      list.push({
+        name,
+        id: name.toLowerCase().replace(/[\s-]/g, '_'),
+        count
+      });
+    }
+
+    list.sort((a, b) => {
+      if (a.name === 'Core') return -1;
+      if (b.name === 'Core') return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return [{ name: 'All Packs', id: 'all', count: this.sprites.length }, ...list];
+  }
+
+  async createPack(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+    const formatted = trimmed.replace(/[_\s-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    this.customPacks.add(formatted);
+
+    try {
+      await fetch('/api/create-pack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: formatted })
+      });
+    } catch (e) {}
+
+    this.notify();
+    return formatted;
   }
 
   async preloadAll() {
@@ -262,18 +328,21 @@ class SpriteLibrary {
 
   getFilteredSprites() {
     return this.sprites.filter(s => {
+      const itemPack = s.pack || 'Core';
+      const matchesPack = this.selectedPack === 'All' || this.selectedPack === 'All Packs' || itemPack.toLowerCase() === this.selectedPack.toLowerCase();
       const matchesCategory = this.selectedCategory === 'All' || s.category === this.selectedCategory;
       const q = this.searchQuery.trim().toLowerCase();
-      if (!q) return matchesCategory;
+      if (!q) return matchesPack && matchesCategory;
       const matchesSearch = s.name.toLowerCase().includes(q) ||
         s.filename.toLowerCase().includes(q) ||
+        itemPack.toLowerCase().includes(q) ||
         (s.tags && s.tags.some(t => t.toLowerCase().includes(q)));
-      return matchesCategory && matchesSearch;
+      return matchesPack && matchesCategory && matchesSearch;
     });
   }
 
   // Load single or multiple files from user's file picker or drop
-  addCustomSprite(file) {
+  addCustomSprite(file, customPack = null) {
     return new Promise((resolve, reject) => {
       const validExts = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
       const ext = '.' + file.name.split('.').pop().toLowerCase();
@@ -300,6 +369,23 @@ class SpriteLibrary {
 
           const friendlyName = file.name.replace(/\.[^/.]+$/, '').replace(/[_\\-]/g, ' ');
 
+          // Infer pack
+          let pack = customPack;
+          if (!pack) {
+            if (file.webkitRelativePath && file.webkitRelativePath.includes('/')) {
+              const folder = file.webkitRelativePath.split('/')[0];
+              pack = folder.replace(/[_\s-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            } else if (this.selectedPack && this.selectedPack !== 'All' && this.selectedPack !== 'All Packs') {
+              pack = this.selectedPack;
+            } else {
+              pack = 'Custom';
+            }
+          }
+          const packId = pack.toLowerCase().replace(/[\s-]/g, '_');
+          if (pack !== 'Core' && pack !== 'Custom') {
+            this.customPacks.add(pack);
+          }
+
           // Check if already in library
           const existingIdx = this.sprites.findIndex(s => s.filename.toLowerCase() === file.name.toLowerCase());
           
@@ -307,11 +393,13 @@ class SpriteLibrary {
             id: id,
             name: friendlyName,
             category: category,
+            pack: pack,
+            packId: packId,
             filename: file.name,
             src: dataUrl,
             width: img.naturalWidth || 64,
             height: img.naturalHeight || 64,
-            tags: ['custom', ext.replace('.', '')]
+            tags: ['custom', pack.toLowerCase(), ext.replace('.', '')]
           };
 
           if (existingIdx !== -1) {
@@ -339,9 +427,18 @@ class SpriteLibrary {
       return ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'].includes(ext) || f.type.startsWith('image/');
     });
 
+    // Detect folder name if webkitRelativePath is available
+    let packName = null;
+    if (files.length > 0 && files[0].webkitRelativePath && files[0].webkitRelativePath.includes('/')) {
+      const folder = files[0].webkitRelativePath.split('/')[0];
+      packName = folder.replace(/[_\s-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      await this.createPack(packName);
+      this.selectedPack = packName;
+    }
+
     for (const file of files) {
       try {
-        await this.addCustomSprite(file);
+        await this.addCustomSprite(file, packName);
       } catch (e) {
         console.warn(`Error loading folder file: ${file.name}`, e);
       }

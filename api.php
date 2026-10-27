@@ -40,7 +40,34 @@ $base_dir = __DIR__;
 $assets_dir = $base_dir . '/assets';
 
 /**
- * Recursively scans assets/ for images and infers categories.
+ * Infers sprite pack name from file's directory relative to assets/
+ */
+function infer_sprite_pack($pathname, $assets_dir) {
+    $rel_assets = str_replace('\\', '/', ltrim(str_replace($assets_dir, '', $pathname), '/\\'));
+    $parts = explode('/', $rel_assets);
+    
+    // e.g. "sprites/chair.svg" -> Core
+    // e.g. "sprites/modern_living/chair.svg" -> Modern Living
+    // e.g. "packs/cyberpunk/chair.svg" -> Cyberpunk
+    // e.g. "fantasy/chair.svg" -> Fantasy
+    if (count($parts) > 1) {
+        $first = strtolower($parts[0]);
+        if (in_array($first, ['sprites', 'packs', 'images']) && count($parts) > 2) {
+            $folder = $parts[1];
+        } elseif (!in_array($first, ['sprites', 'packs', 'images'])) {
+            $folder = $parts[0];
+        } else {
+            $folder = 'Core';
+        }
+        if (!empty($folder) && strtolower($folder) !== 'core') {
+            return ucwords(str_replace(['_', '-'], ' ', $folder));
+        }
+    }
+    return 'Core';
+}
+
+/**
+ * Recursively scans assets/ for images and infers categories and packs.
  */
 function scan_assets_directory($assets_dir, $base_dir, $valid_extensions) {
     $items = [];
@@ -79,6 +106,9 @@ function scan_assets_directory($assets_dir, $base_dir, $valid_extensions) {
                     $category = 'Decor';
                 }
 
+                $pack = infer_sprite_pack($pathname, $assets_dir);
+                $pack_id = strtolower(str_replace(' ', '_', $pack));
+
                 $name_no_ext = pathinfo($filename, PATHINFO_FILENAME);
                 $friendly_name = ucwords(str_replace(['_', '-'], ' ', $name_no_ext));
                 $id = strtolower(str_replace(' ', '_', $name_no_ext));
@@ -87,9 +117,11 @@ function scan_assets_directory($assets_dir, $base_dir, $valid_extensions) {
                     'id' => $id,
                     'name' => $friendly_name,
                     'category' => $category,
+                    'pack' => $pack,
+                    'packId' => $pack_id,
                     'filename' => $filename,
                     'src' => $rel_path,
-                    'tags' => [strtolower($category), $ext]
+                    'tags' => [strtolower($category), strtolower($pack), $ext]
                 ];
             }
         }
@@ -138,6 +170,90 @@ switch ($endpoint) {
         echo json_encode($sprites, JSON_UNESCAPED_SLASHES);
         break;
 
+    case 'packs':
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method Not Allowed']);
+            exit;
+        }
+
+        $sprites = scan_assets_directory($assets_dir, $base_dir, $valid_extensions);
+        $pack_counts = [];
+        foreach ($sprites as $s) {
+            $p = $s['pack'] ?? 'Core';
+            $pack_counts[$p] = ($pack_counts[$p] ?? 0) + 1;
+        }
+
+        // Also discover any empty pack folders in assets/sprites/ and assets/packs/
+        $check_dirs = [$assets_dir . '/sprites', $assets_dir . '/packs', $assets_dir];
+        foreach ($check_dirs as $pdir) {
+            if (is_dir($pdir)) {
+                $subdirs = @scandir($pdir);
+                if ($subdirs) {
+                    foreach ($subdirs as $sd) {
+                        if ($sd !== '.' && $sd !== '..' && is_dir($pdir . '/' . $sd)) {
+                            if (!in_array(strtolower($sd), ['sprites', 'packs', 'images', 'icons'])) {
+                                $pname = ucwords(str_replace(['_', '-'], ' ', $sd));
+                                if (!isset($pack_counts[$pname])) {
+                                    $pack_counts[$pname] = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $packs = [];
+        foreach ($pack_counts as $name => $count) {
+            $packs[] = [
+                'name' => $name,
+                'id' => strtolower(str_replace(' ', '_', $name)),
+                'count' => $count
+            ];
+        }
+
+        usort($packs, function($a, $b) {
+            if ($a['name'] === 'Core') return -1;
+            if ($b['name'] === 'Core') return 1;
+            return strcasecmp($a['name'], $b['name']);
+        });
+
+        echo json_encode($packs, JSON_UNESCAPED_SLASHES);
+        break;
+
+    case 'create-pack':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method Not Allowed']);
+            exit;
+        }
+
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        $name = trim($data['name'] ?? '');
+        if (empty($name)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Pack name required']);
+            exit;
+        }
+
+        $slug = preg_replace('/[^a-z0-9_-]/i', '_', strtolower($name));
+        $target_dir = $assets_dir . '/sprites/' . $slug;
+        if (!is_dir($target_dir)) {
+            @mkdir($target_dir, 0775, true);
+        }
+
+        $display_name = ucwords(str_replace(['_', '-'], ' ', $slug));
+        echo json_encode([
+            'success' => true,
+            'name' => $display_name,
+            'id' => $slug,
+            'path' => 'assets/sprites/' . $slug,
+            'message' => "Created pack folder: assets/sprites/{$slug}"
+        ], JSON_UNESCAPED_SLASHES);
+        break;
+
     case 'save-sprite':
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
@@ -159,7 +275,16 @@ switch ($endpoint) {
             $filename .= '.png';
         }
 
-        $target_dir = $assets_dir . '/sprites';
+        $pack = trim($data['pack'] ?? '');
+        $pack_slug = preg_replace('/[^a-z0-9_-]/i', '_', strtolower($pack));
+        if (!empty($pack_slug) && $pack_slug !== 'core' && $pack_slug !== 'all') {
+            $target_dir = $assets_dir . '/sprites/' . $pack_slug;
+            $save_rel = 'assets/sprites/' . $pack_slug . '/' . $filename;
+        } else {
+            $target_dir = $assets_dir . '/sprites';
+            $save_rel = 'assets/sprites/' . $filename;
+        }
+
         if (!is_dir($target_dir)) {
             @mkdir($target_dir, 0775, true);
         }
@@ -192,7 +317,7 @@ switch ($endpoint) {
 
         echo json_encode([
             'success' => true,
-            'path' => 'assets/sprites/' . $filename,
+            'path' => $save_rel,
             'filename' => $filename,
             'bytes' => $written,
             'message' => "Saved {$filename} successfully."

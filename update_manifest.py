@@ -8,6 +8,21 @@ import json
 
 VALID_EXTS = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'}
 
+def get_pack_name(rel_path):
+    rel_from_assets = os.path.relpath(rel_path, 'assets')
+    parts = rel_from_assets.replace('\\', '/').split('/')
+    if len(parts) > 1:
+        first = parts[0].lower()
+        if first in ['sprites', 'packs', 'images'] and len(parts) > 2:
+            folder = parts[1]
+        elif first not in ['sprites', 'packs', 'images']:
+            folder = parts[0]
+        else:
+            folder = 'Core'
+        if folder.lower() != 'core':
+            return folder.replace('_', ' ').replace('-', ' ').title()
+    return 'Core'
+
 def scan_assets():
     found = []
     assets_dir = 'assets'
@@ -18,7 +33,7 @@ def scan_assets():
         for file in sorted(files):
             ext = os.path.splitext(file)[1].lower()
             if ext in VALID_EXTS:
-                rel_path = os.path.relpath(os.path.join(root, file), '.')
+                rel_path = os.path.relpath(os.path.join(root, file), '.').replace('\\', '/')
                 fname_lower = file.lower()
                 
                 # Category inference with priority
@@ -37,15 +52,19 @@ def scan_assets():
                 else:
                     category = 'Decor'
 
+                pack = get_pack_name(rel_path)
+                pack_id = pack.lower().replace(' ', '_')
                 friendly_name = os.path.splitext(file)[0].replace('_', ' ').replace('-', ' ').title()
 
                 found.append({
                     'id': os.path.splitext(file)[0].lower().replace(' ', '_'),
                     'name': friendly_name,
                     'category': category,
+                    'pack': pack,
+                    'packId': pack_id,
                     'filename': file,
                     'src': rel_path,
-                    'tags': [category.lower(), ext.replace('.', '')]
+                    'tags': [category.lower(), pack.lower(), ext.replace('.', '')]
                 })
     return found
 
