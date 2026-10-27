@@ -254,6 +254,143 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // =========================================================================
+  // Sidebar Resizing Splitter
+  // =========================================================================
+  const sidebarEl = document.getElementById('sidebarLibrary') || document.querySelector('.sidebar-library');
+  const resizerEl = document.getElementById('sidebarResizer');
+
+  if (sidebarEl && resizerEl) {
+    const MIN_SIDEBAR_WIDTH = 270;
+    const DEFAULT_SIDEBAR_WIDTH = 340;
+    const STORAGE_KEY = 'isoroom_sidebar_width';
+
+    const setSidebarWidth = (width, save = false) => {
+      sidebarEl.style.width = `${width}px`;
+      document.documentElement.style.setProperty('--sidebar-width', `${width}px`);
+      if (save) {
+        try {
+          localStorage.setItem(STORAGE_KEY, width.toString());
+        } catch (e) {}
+      }
+      if (roomCanvas) {
+        roomCanvas.initCanvasSize();
+        roomCanvas.requestRender();
+      }
+    };
+
+    // Restore saved width from localStorage
+    try {
+      const savedWidth = localStorage.getItem(STORAGE_KEY);
+      if (savedWidth) {
+        const parsed = parseInt(savedWidth, 10);
+        if (!isNaN(parsed) && parsed >= MIN_SIDEBAR_WIDTH) {
+          setSidebarWidth(parsed, false);
+        } else {
+          setSidebarWidth(DEFAULT_SIDEBAR_WIDTH, false);
+        }
+      } else {
+        setSidebarWidth(DEFAULT_SIDEBAR_WIDTH, false);
+      }
+    } catch (e) {
+      setSidebarWidth(DEFAULT_SIDEBAR_WIDTH, false);
+    }
+
+    let isResizingSidebar = false;
+    let resizeStartX = 0;
+    let resizeStartWidth = 0;
+
+    const onStartResize = (clientX) => {
+      isResizingSidebar = true;
+      resizeStartX = clientX;
+      resizeStartWidth = sidebarEl.getBoundingClientRect().width;
+      document.body.classList.add('resizing-sidebar');
+      resizerEl.classList.add('is-resizing');
+    };
+
+    const onMoveResize = (clientX) => {
+      if (!isResizingSidebar) return;
+      const deltaX = clientX - resizeStartX;
+      const maxAllowed = Math.max(MIN_SIDEBAR_WIDTH, Math.floor(window.innerWidth - 300));
+      const targetWidth = Math.min(maxAllowed, Math.max(MIN_SIDEBAR_WIDTH, resizeStartWidth + deltaX));
+      setSidebarWidth(targetWidth, false);
+    };
+
+    const onEndResize = () => {
+      if (!isResizingSidebar) return;
+      isResizingSidebar = false;
+      document.body.classList.remove('resizing-sidebar');
+      resizerEl.classList.remove('is-resizing');
+      const finalWidth = Math.round(sidebarEl.getBoundingClientRect().width);
+      setSidebarWidth(finalWidth, true);
+    };
+
+    // Mouse events
+    resizerEl.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      onStartResize(e.clientX);
+
+      const onMouseMove = (ev) => onMoveResize(ev.clientX);
+      const onMouseUp = () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        onEndResize();
+      };
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    });
+
+    // Touch events for touchscreens / tablets
+    resizerEl.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      onStartResize(e.touches[0].clientX);
+
+      const onTouchMove = (ev) => {
+        if (ev.touches.length === 1) {
+          ev.preventDefault();
+          onMoveResize(ev.touches[0].clientX);
+        }
+      };
+      const onTouchEnd = () => {
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('touchend', onTouchEnd);
+        onEndResize();
+      };
+      window.addEventListener('touchmove', onTouchMove, { passive: false });
+      window.addEventListener('touchend', onTouchEnd);
+    }, { passive: true });
+
+    // Double-click to reset to default comfortable 340px width
+    resizerEl.addEventListener('dblclick', () => {
+      setSidebarWidth(DEFAULT_SIDEBAR_WIDTH, true);
+      showToast('Sidebar width reset to default (340px)');
+    });
+
+    // Keyboard accessibility: Left / Right arrow keys on focused resizer
+    resizerEl.addEventListener('keydown', (e) => {
+      const step = e.shiftKey ? 32 : 16;
+      const currentWidth = sidebarEl.getBoundingClientRect().width;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const maxAllowed = Math.max(MIN_SIDEBAR_WIDTH, Math.floor(window.innerWidth - 300));
+        const newWidth = Math.min(maxAllowed, Math.max(MIN_SIDEBAR_WIDTH, currentWidth - step));
+        setSidebarWidth(newWidth, true);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const maxAllowed = Math.max(MIN_SIDEBAR_WIDTH, Math.floor(window.innerWidth - 300));
+        const newWidth = Math.min(maxAllowed, Math.max(MIN_SIDEBAR_WIDTH, currentWidth + step));
+        setSidebarWidth(newWidth, true);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setSidebarWidth(MIN_SIDEBAR_WIDTH, true);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setSidebarWidth(DEFAULT_SIDEBAR_WIDTH, true);
+      }
+    });
+  }
+
+  // =========================================================================
   // Sidebar Dual Tab Navigation & Placed Assets Outliner
   // =========================================================================
 

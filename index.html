@@ -167,7 +167,7 @@
   <main class="app-body">
 
     <!-- Left Sidebar: Sprite Library & Placed Assets Outliner -->
-    <aside class="sidebar-library">
+    <aside class="sidebar-library" id="sidebarLibrary">
       <!-- Main Sidebar Dual Switcher Tabs -->
       <div class="sidebar-nav-tabs">
         <button type="button" id="tabBtnLibrary" class="sidebar-nav-tab active" title="Browse available sprite library">
@@ -294,6 +294,9 @@
         </div>
       </div>
     </aside>
+
+    <!-- Resizable Splitter Handle for Sidebar -->
+    <div class="sidebar-resizer" id="sidebarResizer" role="separator" aria-orientation="vertical" tabindex="0" title="Drag to resize panel (Double-click to reset width)"></div>
 
     <!-- Center Canvas Workspace -->
     <section class="canvas-viewport" id="canvasViewport">

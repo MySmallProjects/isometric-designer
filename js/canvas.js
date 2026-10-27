@@ -518,6 +518,14 @@ class RoomCanvas {
       this.requestRender();
     });
 
+    if (typeof ResizeObserver !== 'undefined' && this.canvas.parentElement) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.initCanvasSize();
+        this.requestRender();
+      });
+      this.resizeObserver.observe(this.canvas.parentElement);
+    }
+
     const el = this.canvas;
 
     el.addEventListener('mousedown', (e) => this.onMouseDown(e));

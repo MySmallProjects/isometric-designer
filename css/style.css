@@ -25,7 +25,7 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
-  --sidebar-width: 310px;
+  --sidebar-width: 340px;
   --inspector-width: 320px;
   --header-height: 56px;
   --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -251,12 +251,64 @@ body {
 /* Sidebar (Library) */
 .sidebar-library {
   width: var(--sidebar-width);
+  min-width: 270px;
+  max-width: 800px;
   background-color: var(--bg-panel);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   z-index: 10;
+  position: relative;
+}
+
+/* Sidebar Resizer Splitter */
+.sidebar-resizer {
+  width: 9px;
+  margin-left: -5px;
+  margin-right: -4px;
+  cursor: col-resize;
+  position: relative;
+  z-index: 15;
+  background: transparent;
+  flex-shrink: 0;
+  user-select: none;
+  touch-action: none;
+  outline: none;
+}
+
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+  background: var(--border-color);
+  transition: background-color 0.15s ease, width 0.15s ease, left 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+.sidebar-resizer.is-resizing::after {
+  background: var(--primary);
+  width: 3px;
+  left: 3px;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+}
+
+body.resizing-sidebar {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.resizing-sidebar * {
+  user-select: none !important;
+}
+
+body.resizing-sidebar #roomCanvas,
+body.resizing-sidebar iframe {
+  pointer-events: none !important;
 }
 
 /* Sidebar Dual Switcher Tabs */
@@ -627,7 +679,7 @@ body {
   overflow-y: auto;
   padding: 12px;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-content: start;
 }
@@ -676,6 +728,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .sprite-name {
