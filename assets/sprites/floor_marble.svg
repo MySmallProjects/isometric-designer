@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 64" width="128" height="64">
+  <defs>
+    <linearGradient id="marbleBase" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="marbleVein" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#94a3b8" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#cbd5e1" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#64748b" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+  <!-- Diamond base -->
+  <polygon points="64,2 126,32 64,62 2,32" fill="url(#marbleBase)" stroke="#cbd5e1" stroke-width="1.5"/>
+  <!-- Polished sheen highlight -->
+  <polygon points="64,6 100,24 64,42 28,24" fill="#ffffff" opacity="0.4"/>
+  <!-- Marble veins -->
+  <path d="M25,25 Q45,28 60,20 T95,35 T115,28" fill="none" stroke="url(#marbleVein)" stroke-width="1.2"/>
+  <path d="M40,40 Q55,32 75,42 T105,45" fill="none" stroke="url(#marbleVein)" stroke-width="0.8" opacity="0.6"/>
+  <path d="M15,30 Q30,38 45,46" fill="none" stroke="url(#marbleVein)" stroke-width="0.7" opacity="0.5"/>
+  <!-- Subtle diagonal bevel border -->
+  <polyline points="2,32 64,2 126,32" fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0.8"/>
+  <polyline points="126,32 64,62 2,32" fill="none" stroke="#94a3b8" stroke-width="1.2" opacity="0.5"/>
+</svg>

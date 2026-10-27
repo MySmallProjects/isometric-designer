@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 95" width="70" height="95">
+  <defs>
+    <linearGradient id="chairWood" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <linearGradient id="chairCushion" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+  </defs>
+  <!-- Floor shadow -->
+  <ellipse cx="35" cy="85" rx="18" ry="7" fill="#000000" opacity="0.25"/>
+  <!-- Back legs -->
+  <line x1="24" y1="52" x2="20" y2="82" stroke="#451a03" stroke-width="3" stroke-linecap="round"/>
+  <line x1="46" y1="52" x2="50" y2="82" stroke="#451a03" stroke-width="3" stroke-linecap="round"/>
+  <!-- High curved backrest -->
+  <path d="M22,18 Q35,8 48,18 L48,50 Q35,42 22,50 Z" fill="url(#chairWood)" stroke="#451a03" stroke-width="1.5"/>
+  <!-- Spindles in backrest -->
+  <line x1="30" y1="20" x2="30" y2="44" stroke="#78350f" stroke-width="2"/>
+  <line x1="35" y1="16" x2="35" y2="42" stroke="#78350f" stroke-width="2"/>
+  <line x1="40" y1="20" x2="40" y2="44" stroke="#78350f" stroke-width="2"/>
+  <!-- Front legs -->
+  <line x1="16" y1="60" x2="14" y2="88" stroke="#78350f" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="54" y1="60" x2="56" y2="88" stroke="#78350f" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Padded seat diamond -->
+  <polygon points="35,46 58,58 35,70 12,58" fill="url(#chairCushion)" stroke="#a16207" stroke-width="1.5"/>
+  <!-- Seat thickness -->
+  <polygon points="12,58 35,70 35,74 12,62" fill="#854d0e"/>
+  <polygon points="35,70 58,58 58,62 35,74" fill="#a16207"/>
+</svg>

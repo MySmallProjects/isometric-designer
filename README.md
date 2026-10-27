@@ -5,7 +5,13 @@ A lightweight, responsive web application for creating isometric room scenes usi
 ## Features
 
 - **Sprite Library & Browser**:
-  - Built-in isometric sprites: Wood Floor, Carpet, Stone Floor, Left Wall, Right Wall, Modern Sofa, Armchair, Wood Table, Workstation Desk, Bookshelf, Queen Bed, Retro TV, Monstera Plant, and Floor Lamp.
+  - Over 40 built-in isometric sprites across 6 categories:
+    - **Tileable Flooring**: Light Wood, Dark Walnut, Carrara Marble, Checkerboard, Japanese Tatami, Terracotta, Lush Grass, Stone, and Cyberpunk Neon Grid.
+    - **Rugs & Carpets**: Ornate Persian Rug, Round Boho Jute Rug, Scandinavian Geometric Runner.
+    - **Tables & Desks**: Solid Oak Dining Table, Glass Round Coffee Table, Bedside Nightstand, Dual-Monitor Gaming Battlestation, Workstation Desk.
+    - **Chairs & Seating**: Mid-Century Wooden Dining Chair, Ergonomic Mesh Swivel Office Chair, Vintage Leather Lounge Chair, Tall Bar Stool, Blue Sofa, Armchair.
+    - **Storage**: Mid-Century 3-Drawer Dresser, Tall Double-Door Wardrobe with Mirror, Bookshelves.
+    - **Lighting & Decor**: Potted Monstera Deliciosa, Stack of Hardcover Books with Coffee Mug, Articulated Desk Anglepoise Lamp, Industrial Edison Pendant Light, Floor Lamp.
   - Search/filter sprites by name or tag.
   - Category tabs (`All`, `Floors`, `Walls`, `Furniture`, `Storage`, `Decor`, `Lighting`, `Custom`).
   - **Click to Add** or **Drag-and-Drop** directly onto the canvas workspace.

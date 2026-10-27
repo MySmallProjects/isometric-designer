@@ -63,18 +63,18 @@ function scan_assets_directory($assets_dir, $base_dir, $valid_extensions) {
                 $fname_lower = strtolower($filename);
 
                 // Category inference
-                if (preg_match('/(lamp|light|candle|lantern)/i', $fname_lower)) {
+                if (preg_match('/(lamp|light|candle|lantern|pendant)/i', $fname_lower)) {
                     $category = 'Lighting';
-                } elseif (preg_match('/(plant|flower|tree|pot|rug|art|decor)/i', $fname_lower)) {
-                    $category = 'Decor';
-                } elseif (preg_match('/(shelf|bookshelf|storage|wardrobe|cabinet)/i', $fname_lower)) {
+                } elseif (preg_match('/(shelf|bookshelf|storage|wardrobe|cabinet|dresser)/i', $fname_lower)) {
                     $category = 'Storage';
-                } elseif (preg_match('/(floor|carpet|stone|tile|wood|ground)/i', $fname_lower)) {
+                } elseif (preg_match('/(sofa|couch|chair|table|desk|bed|bench|tv|stool|armchair)/i', $fname_lower)) {
+                    $category = 'Furniture';
+                } elseif (preg_match('/(plant|flower|tree|pot|rug|art|decor|clock|book)/i', $fname_lower)) {
+                    $category = 'Decor';
+                } elseif (preg_match('/(floor|carpet|stone|tile|tatami|terracotta|parquet|grass|ground|wood)/i', $fname_lower)) {
                     $category = 'Floors';
                 } elseif (preg_match('/(wall|window|door|brick)/i', $fname_lower)) {
                     $category = 'Walls';
-                } elseif (preg_match('/(sofa|couch|chair|table|desk|bed|bench|tv)/i', $fname_lower)) {
-                    $category = 'Furniture';
                 } else {
                     $category = 'Decor';
                 }

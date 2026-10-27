@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 76" width="140" height="76">
+  <defs>
+    <linearGradient id="rugRuby" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9e0031"/>
+      <stop offset="50%" stop-color="#67001f"/>
+      <stop offset="100%" stop-color="#470014"/>
+    </linearGradient>
+  </defs>
+  <!-- Drop shadow -->
+  <polygon points="70,9 135,41 70,73 5,41" fill="#000000" opacity="0.25"/>
+  <!-- Main rug diamond -->
+  <polygon points="70,6 132,37 70,68 8,37" fill="url(#rugRuby)" stroke="#fbbf24" stroke-width="1.8"/>
+  <!-- Gold outer border band -->
+  <polygon points="70,12 120,37 70,62 20,37" fill="#1e1b4b" stroke="#fbbf24" stroke-width="1.2"/>
+  <!-- Intricate center medallion -->
+  <polygon points="70,22 98,37 70,52 42,37" fill="#b91c1c" stroke="#fbbf24" stroke-width="1"/>
+  <polygon points="70,27 88,37 70,47 52,37" fill="#fbbf24" opacity="0.8"/>
+  <circle cx="70" cy="37" r="4" fill="#0284c7"/>
+  <!-- White fringes on ends -->
+  <line x1="8" y1="37" x2="4" y2="39" stroke="#fef08a" stroke-width="1.5" stroke-dasharray="2,2"/>
+  <line x1="132" y1="37" x2="136" y2="35" stroke="#fef08a" stroke-width="1.5" stroke-dasharray="2,2"/>
+</svg>

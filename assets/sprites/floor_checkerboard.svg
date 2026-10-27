@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 64" width="128" height="64">
+  <!-- 2x2 checkerboard on isometric diamond -->
+  <polygon points="64,2 126,32 64,62 2,32" fill="#0f172a" stroke="#020617" stroke-width="1.5"/>
+  <!-- Top tile (White) -->
+  <polygon points="64,2 95,17 64,32 33,17" fill="#f8fafc" stroke="#334155" stroke-width="1"/>
+  <!-- Bottom tile (White) -->
+  <polygon points="64,32 95,47 64,62 33,47" fill="#f8fafc" stroke="#334155" stroke-width="1"/>
+  <!-- Left tile (Black/Slate) -->
+  <polygon points="33,17 64,32 33,47 2,32" fill="#1e293b" stroke="#0f172a" stroke-width="1"/>
+  <!-- Right tile (Black/Slate) -->
+  <polygon points="95,17 126,32 95,47 64,32" fill="#1e293b" stroke="#0f172a" stroke-width="1"/>
+  <!-- Polished glare -->
+  <polygon points="64,6 80,14 64,22 48,14" fill="#ffffff" opacity="0.4"/>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" width="160" height="110">
+  <defs>
+    <linearGradient id="tableOak" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d4a373"/>
+      <stop offset="50%" stop-color="#bc6c25"/>
+      <stop offset="100%" stop-color="#99582a"/>
+    </linearGradient>
+  </defs>
+  <!-- Floor shadow -->
+  <polygon points="80,56 150,88 80,108 10,88" fill="#000000" opacity="0.25"/>
+  <!-- 4 Sturdy Wooden Legs -->
+  <polygon points="20,58 26,55 26,92 20,95" fill="#603813"/>
+  <polygon points="134,58 140,55 140,92 134,95" fill="#7f4f24"/>
+  <polygon points="76,82 82,79 82,106 76,109" fill="#603813"/>
+  <polygon points="76,46 82,43 82,78 76,81" fill="#43281c"/>
+  <!-- Thick Tabletop Diamond -->
+  <polygon points="80,24 154,60 80,94 6,60" fill="url(#tableOak)" stroke="#7f4f24" stroke-width="2"/>
+  <!-- Tabletop rim/bevel -->
+  <polygon points="6,60 80,94 80,100 6,66" fill="#7f4f24"/>
+  <polygon points="80,94 154,60 154,66 80,100" fill="#99582a"/>
+  <!-- Wood plank grooves on tabletop -->
+  <line x1="43" y1="42" x2="117" y2="77" stroke="#7f4f24" stroke-width="1.2" opacity="0.7"/>
+  <line x1="62" y1="33" x2="135" y2="69" stroke="#7f4f24" stroke-width="1.2" opacity="0.7"/>
+  <line x1="25" y1="51" x2="98" y2="86" stroke="#7f4f24" stroke-width="1.2" opacity="0.7"/>
+  <!-- Table runner centerpiece -->
+  <polygon points="80,36 108,50 80,64 52,50" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" opacity="0.9"/>
+  <!-- Small flower vase on table -->
+  <ellipse cx="80" cy="48" rx="4" ry="2" fill="#0284c7"/>
+  <line x1="80" y1="48" x2="80" y2="40" stroke="#16a34a" stroke-width="1.5"/>
+  <circle cx="80" cy="39" r="3" fill="#f43f5e"/>
+</svg>

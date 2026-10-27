@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 60" width="110" height="60">
+  <defs>
+    <radialGradient id="juteGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fefae0"/>
+      <stop offset="60%" stop-color="#dda15e"/>
+      <stop offset="100%" stop-color="#bc6c25"/>
+    </radialGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="55" cy="32" rx="50" ry="25" fill="#000000" opacity="0.2"/>
+  <!-- Concentric woven rings -->
+  <ellipse cx="55" cy="30" rx="48" ry="24" fill="url(#juteGrad)" stroke="#99582a" stroke-width="1.2"/>
+  <ellipse cx="55" cy="30" rx="38" ry="19" fill="none" stroke="#283618" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <ellipse cx="55" cy="30" rx="26" ry="13" fill="#fefae0" stroke="#bc6c25" stroke-width="1"/>
+  <ellipse cx="55" cy="30" rx="14" ry="7" fill="#606c38" stroke="#283618" stroke-width="1"/>
+  <circle cx="55" cy="30" r="3" fill="#dda15e"/>
+</svg>

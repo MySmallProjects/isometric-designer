@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 68" width="130" height="68">
+  <!-- Scandinavian Modern Geometric Runner -->
+  <polygon points="65,8 126,38 65,68 4,38" fill="#000000" opacity="0.2"/>
+  <!-- Rug base -->
+  <polygon points="65,4 122,33 65,62 8,33" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+  <!-- Yellow and navy geo chevrons -->
+  <polygon points="65,10 90,23 65,36 40,23" fill="#eab308"/>
+  <polygon points="65,26 90,39 65,52 40,39" fill="#0284c7"/>
+  <polygon points="35,20 60,33 35,46 10,33" fill="#0f172a"/>
+  <polygon points="95,20 120,33 95,46 70,33" fill="#0f172a"/>
+</svg>

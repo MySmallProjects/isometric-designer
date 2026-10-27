@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 90" width="50" height="90">
+  <defs>
+    <linearGradient id="metalLeg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="25" cy="84" rx="14" ry="5" fill="#000000" opacity="0.25"/>
+  <!-- 4 tall metal legs -->
+  <line x1="16" y1="36" x2="10" y2="84" stroke="url(#metalLeg)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="34" y1="36" x2="40" y2="84" stroke="url(#metalLeg)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="22" y1="38" x2="18" y2="82" stroke="#1e293b" stroke-width="2" stroke-linecap="round"/>
+  <line x1="28" y1="38" x2="32" y2="82" stroke="#1e293b" stroke-width="2" stroke-linecap="round"/>
+  <!-- Footrest ring -->
+  <ellipse cx="25" cy="64" rx="12" ry="4" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <!-- Round cushioned seat -->
+  <ellipse cx="25" cy="34" rx="16" ry="8" fill="#0284c7" stroke="#0369a1" stroke-width="1.5"/>
+  <!-- Seat rim -->
+  <path d="M9,34 C9,40 41,40 41,34 L41,38 C41,44 9,44 9,38 Z" fill="#0369a1"/>
+</svg>

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 115" width="130" height="115">
+  <defs>
+    <linearGradient id="carbonDesk" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <!-- Floor shadow -->
+  <polygon points="65,65 124,94 65,114 6,94" fill="#000000" opacity="0.3"/>
+  <!-- Z-shaped Gaming Desk Legs (Red & Black) -->
+  <line x1="16" y1="68" x2="12" y2="102" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+  <line x1="114" y1="68" x2="118" y2="102" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+  <line x1="65" y1="88" x2="65" y2="110" stroke="#991b1b" stroke-width="4" stroke-linecap="round"/>
+  <!-- RGB underglow line -->
+  <polyline points="10,67 65,95 120,67" fill="none" stroke="#06b6d4" stroke-width="2" opacity="0.8"/>
+  <!-- Desktop Surface Diamond (Carbon fiber) -->
+  <polygon points="65,36 124,65 65,95 6,65" fill="url(#carbonDesk)" stroke="#334155" stroke-width="2"/>
+  <polygon points="6,65 65,95 65,99 6,69" fill="#020617"/>
+  <polygon points="65,95 124,65 124,69 65,99" fill="#1e293b"/>
+  <!-- XL Deskmat (Red & Black) -->
+  <polygon points="65,48 105,68 65,88 25,68" fill="#450a0a" stroke="#dc2626" stroke-width="1.2"/>
+  <!-- Mechanical Keyboard & Mouse -->
+  <polygon points="62,63 76,70 68,74 54,67" fill="#0f172a" stroke="#06b6d4" stroke-width="1"/>
+  <ellipse cx="85" cy="74" rx="3" ry="2" fill="#0f172a" stroke="#ec4899" stroke-width="0.8"/>
+  <!-- Dual Gaming Monitors -->
+  <!-- Monitor 1 (Main) -->
+  <polygon points="45,22 75,37 75,54 45,39" fill="#0284c7" stroke="#0f172a" stroke-width="2"/>
+  <line x1="60" y1="46" x2="60" y2="56" stroke="#475569" stroke-width="3"/>
+  <!-- Monitor 2 (Angled) -->
+  <polygon points="76,37 98,44 98,60 76,53" fill="#a855f7" stroke="#0f172a" stroke-width="2"/>
+  <!-- PC Tower with glass RGB panel -->
+  <polygon points="102,52 114,58 114,80 102,74" fill="#06b6d4" stroke="#0f172a" stroke-width="1.5" opacity="0.85"/>
+  <polygon points="102,52 114,58 110,54 98,48" fill="#1e293b"/>
+</svg>

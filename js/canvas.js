@@ -594,20 +594,41 @@ class RoomCanvas {
       } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         if (this.selectedItem) {
           e.preventDefault();
-          const step = e.shiftKey ? 16 : (this.grid.snap ? this.grid.size / 4 : 4);
-          let dx = 0, dy = 0;
-          if (e.key === 'ArrowLeft') dx = -step;
-          if (e.key === 'ArrowRight') dx = step;
-          if (e.key === 'ArrowUp') dy = -step;
-          if (e.key === 'ArrowDown') dy = step;
+          const isIso = this.grid.type === 'isometric';
+          let stepX, stepY;
 
-          this.selectedItem.x += dx;
-          this.selectedItem.y += dy;
           if (this.grid.snap) {
-            const snapped = this.snapCoordinate(this.selectedItem.x, this.selectedItem.y);
-            this.selectedItem.x = snapped.x;
-            this.selectedItem.y = snapped.y;
+            if (e.shiftKey) {
+              // Shift with snap enabled: precision micro-nudge (bypasses snap)
+              stepX = 2;
+              stepY = 2;
+            } else {
+              // Standard arrow with snap: step by grid cell unit
+              stepX = isIso ? this.grid.size / 2 : this.grid.size;
+              stepY = isIso ? this.grid.size / 4 : this.grid.size;
+            }
+          } else {
+            // Free movement (snap disabled): 4px default, 16px with Shift
+            const freeStep = e.shiftKey ? 16 : 4;
+            stepX = freeStep;
+            stepY = freeStep;
           }
+
+          let dx = 0, dy = 0;
+          if (e.key === 'ArrowLeft') dx = -stepX;
+          if (e.key === 'ArrowRight') dx = stepX;
+          if (e.key === 'ArrowUp') dy = -stepY;
+          if (e.key === 'ArrowDown') dy = stepY;
+
+          if (this.grid.snap && !e.shiftKey) {
+            const snapped = this.snapCoordinate(this.selectedItem.x, this.selectedItem.y);
+            this.selectedItem.x = snapped.x + dx;
+            this.selectedItem.y = snapped.y + dy;
+          } else {
+            this.selectedItem.x += dx;
+            this.selectedItem.y += dy;
+          }
+
           this.requestRender();
           if (this.onItemChange) this.onItemChange(this.selectedItem);
         }

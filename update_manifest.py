@@ -22,18 +22,18 @@ def scan_assets():
                 fname_lower = file.lower()
                 
                 # Category inference with priority
-                if any(w in fname_lower for w in ['lamp', 'light', 'candle', 'lantern']):
+                if any(w in fname_lower for w in ['lamp', 'light', 'candle', 'lantern', 'pendant']):
                     category = 'Lighting'
-                elif any(w in fname_lower for w in ['plant', 'flower', 'tree', 'pot', 'rug', 'art', 'decor']):
-                    category = 'Decor'
-                elif any(w in fname_lower for w in ['shelf', 'bookshelf', 'storage', 'wardrobe', 'cabinet']):
+                elif any(w in fname_lower for w in ['shelf', 'bookshelf', 'storage', 'wardrobe', 'cabinet', 'dresser']):
                     category = 'Storage'
-                elif any(w in fname_lower for w in ['floor', 'carpet', 'stone', 'tile', 'wood', 'ground']):
+                elif any(w in fname_lower for w in ['sofa', 'couch', 'chair', 'table', 'desk', 'bed', 'bench', 'tv', 'stool', 'armchair']):
+                    category = 'Furniture'
+                elif any(w in fname_lower for w in ['plant', 'flower', 'tree', 'pot', 'rug', 'art', 'decor', 'clock', 'book']):
+                    category = 'Decor'
+                elif any(w in fname_lower for w in ['floor', 'carpet', 'stone', 'tile', 'tatami', 'terracotta', 'parquet', 'grass', 'ground', 'wood']):
                     category = 'Floors'
                 elif any(w in fname_lower for w in ['wall', 'window', 'door', 'brick']):
                     category = 'Walls'
-                elif any(w in fname_lower for w in ['sofa', 'couch', 'chair', 'table', 'desk', 'bed', 'bench', 'tv']):
-                    category = 'Furniture'
                 else:
                     category = 'Decor'
 

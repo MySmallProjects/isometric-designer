@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 110" width="50" height="110">
+  <!-- Ceiling mount cord -->
+  <line x1="25" y1="0" x2="25" y2="60" stroke="#0f172a" stroke-width="2"/>
+  <!-- Brass socket fitting -->
+  <rect x="22" y="60" width="6" height="8" fill="#d97706" rx="1"/>
+  <!-- Modern Geometric Metal Cage Shade -->
+  <polygon points="25,68 44,82 25,98 6,82" fill="none" stroke="#1e293b" stroke-width="2"/>
+  <line x1="25" y1="68" x2="25" y2="98" stroke="#1e293b" stroke-width="1.5"/>
+  <line x1="6" y1="82" x2="44" y2="82" stroke="#1e293b" stroke-width="1.5"/>
+  <!-- Glowing Edison Filament Bulb Inside -->
+  <circle cx="25" cy="82" r="6" fill="#fef08a" stroke="#f59e0b" stroke-width="1"/>
+  <circle cx="25" cy="82" r="10" fill="#fef08a" opacity="0.25"/>
+</svg>

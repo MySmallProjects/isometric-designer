@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 110" width="80" height="110">
+  <defs>
+    <linearGradient id="meshGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="chrome" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="50%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+  </defs>
+  <!-- Caster wheels & 5-star base -->
+  <ellipse cx="40" cy="98" rx="22" ry="8" fill="#000000" opacity="0.3"/>
+  <line x1="40" y1="88" x2="22" y2="98" stroke="url(#chrome)" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="40" y1="88" x2="58" y2="98" stroke="url(#chrome)" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="40" y1="88" x2="40" y2="103" stroke="url(#chrome)" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="40" y1="88" x2="28" y2="86" stroke="url(#chrome)" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="40" y1="88" x2="52" y2="86" stroke="url(#chrome)" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Central pneumatic cylinder -->
+  <rect x="38" y="70" width="4" height="18" fill="url(#chrome)"/>
+  <!-- Seat cushion -->
+  <polygon points="40,58 64,68 40,78 16,68" fill="url(#meshGrad)" stroke="#0f172a" stroke-width="1.5"/>
+  <polygon points="16,68 40,78 40,82 16,72" fill="#020617"/>
+  <polygon points="40,78 64,68 64,72 40,82" fill="#1e293b"/>
+  <!-- Ergonomic curved mesh backrest -->
+  <path d="M24,20 C24,10 56,10 56,20 L58,58 C58,62 22,62 22,58 Z" fill="url(#meshGrad)" stroke="#0284c7" stroke-width="1.8"/>
+  <rect x="30" y="24" width="20" height="24" rx="4" fill="#1e293b" opacity="0.6"/>
+  <!-- Armrests -->
+  <path d="M14,54 L14,46 L24,44" fill="none" stroke="#475569" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M66,54 L66,46 L56,44" fill="none" stroke="#475569" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Lumbar support bar -->
+  <line x1="26" y1="42" x2="54" y2="42" stroke="#0284c7" stroke-width="2"/>
+</svg>
