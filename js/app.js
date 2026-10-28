@@ -112,6 +112,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const aspectLockIcon = document.getElementById('aspectLockIcon');
   const btnSetDimensions = document.getElementById('btnSetDimensions');
   const presetButtons = document.querySelectorAll('.preset-btn');
+  const inspRotationInput = document.getElementById('inspRotationInput');
+  const btnRotateCCW = document.getElementById('btnRotateCCW');
+  const btnRotateCW = document.getElementById('btnRotateCW');
+  const btnResetRotation = document.getElementById('btnResetRotation');
+  const anglePresetButtons = document.querySelectorAll('.angle-preset-btn');
+  const btnFlipH = document.getElementById('btnFlipH');
+  const btnFlipV = document.getElementById('btnFlipV');
   const btnBringForward = document.getElementById('btnBringForward');
   const btnSendBackward = document.getElementById('btnSendBackward');
   const btnBringToFront = document.getElementById('btnBringToFront');
@@ -253,7 +260,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (updateInputs) {
       inspWidthInput.value = Math.round(item.width);
       inspHeightInput.value = Math.round(item.height);
+      if (inspRotationInput) {
+        inspRotationInput.value = Math.round(item.rotation || 0);
+      }
     }
+
+    if (btnFlipH) {
+      btnFlipH.classList.toggle('active', !!item.flipX);
+    }
+    if (btnFlipV) {
+      btnFlipV.classList.toggle('active', !!item.flipY);
+    }
+
+    // Reflect transform in inspector thumbnail preview
+    const rot = Math.round(item.rotation || 0);
+    const sx = item.flipX ? -1 : 1;
+    const sy = item.flipY ? -1 : 1;
+    inspPreviewImg.style.transform = `rotate(${rot}deg) scale(${sx}, ${sy})`;
   }
 
   // =========================================================================
@@ -494,14 +517,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       card.title = `${item.name} (${item.filename})\nClick to select & edit in Inspector`;
 
       const isHidden = item.hidden;
+      const rot = Math.round(item.rotation || 0);
+      const sx = item.flipX ? -1 : 1;
+      const sy = item.flipY ? -1 : 1;
+      const flipLabel = (item.flipX && item.flipY) ? ' &bull; Flip HV' : (item.flipX ? ' &bull; Flip H' : (item.flipY ? ' &bull; Flip V' : ''));
+      const rotLabel = rot ? ` &bull; ${rot}°` : '';
 
       card.innerHTML = `
         <div class="placed-item-thumb">
-          <img src="${item.src}" alt="${item.name}">
+          <img src="${item.src}" alt="${item.name}" style="transform: rotate(${rot}deg) scale(${sx}, ${sy});">
         </div>
         <div class="placed-item-info">
           <div class="placed-item-title">${item.name}</div>
-          <div class="placed-item-details">${Math.round(item.width)}×${Math.round(item.height)} px &bull; (${Math.round(item.x)}, ${Math.round(item.y)})</div>
+          <div class="placed-item-details">${Math.round(item.width)}×${Math.round(item.height)} px &bull; (${Math.round(item.x)}, ${Math.round(item.y)})${rotLabel}${flipLabel}</div>
         </div>
         <div class="placed-item-actions">
           <button class="placed-action-btn btn-vis ${isHidden ? 'active-hidden' : ''}" title="${isHidden ? 'Show sprite' : 'Hide sprite'}">
@@ -670,6 +698,98 @@ document.addEventListener('DOMContentLoaded', async () => {
       showToast(`Scale set to ${btn.textContent}`);
     });
   });
+
+  // =========================================================================
+  // Transform & Orientation Controls (Rotation & Flip)
+  // =========================================================================
+  if (inspRotationInput) {
+    inspRotationInput.addEventListener('input', () => {
+      if (roomCanvas.selectedItem) {
+        const val = parseFloat(inspRotationInput.value);
+        if (!isNaN(val)) {
+          roomCanvas.setItemRotation(roomCanvas.selectedItem, val);
+        }
+      }
+    });
+
+    inspRotationInput.addEventListener('change', () => {
+      if (roomCanvas.selectedItem) {
+        let val = parseFloat(inspRotationInput.value);
+        if (isNaN(val)) val = 0;
+        val = ((Math.round(val) % 360) + 360) % 360;
+        inspRotationInput.value = val;
+        roomCanvas.setItemRotation(roomCanvas.selectedItem, val);
+        showToast(`Rotation set to ${val}°`);
+      }
+    });
+
+    inspRotationInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        inspRotationInput.blur();
+      }
+    });
+  }
+
+  if (btnRotateCCW) {
+    btnRotateCCW.addEventListener('click', () => {
+      if (!roomCanvas.selectedItem) return;
+      const cur = roomCanvas.selectedItem.rotation || 0;
+      const next = ((cur - 45) % 360 + 360) % 360;
+      if (inspRotationInput) inspRotationInput.value = next;
+      roomCanvas.setItemRotation(roomCanvas.selectedItem, next);
+      showToast(`Rotated to ${next}°`);
+    });
+  }
+
+  if (btnRotateCW) {
+    btnRotateCW.addEventListener('click', () => {
+      if (!roomCanvas.selectedItem) return;
+      const cur = roomCanvas.selectedItem.rotation || 0;
+      const next = ((cur + 45) % 360 + 360) % 360;
+      if (inspRotationInput) inspRotationInput.value = next;
+      roomCanvas.setItemRotation(roomCanvas.selectedItem, next);
+      showToast(`Rotated to ${next}°`);
+    });
+  }
+
+  if (btnResetRotation) {
+    btnResetRotation.addEventListener('click', () => {
+      if (!roomCanvas.selectedItem) return;
+      if (inspRotationInput) inspRotationInput.value = 0;
+      roomCanvas.setItemRotation(roomCanvas.selectedItem, 0);
+      showToast('Rotation reset to 0°');
+    });
+  }
+
+  if (anglePresetButtons) {
+    anglePresetButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!roomCanvas.selectedItem) return;
+        const angle = parseInt(btn.dataset.angle, 10) || 0;
+        if (inspRotationInput) inspRotationInput.value = angle;
+        roomCanvas.setItemRotation(roomCanvas.selectedItem, angle);
+        showToast(`Rotated to ${angle}°`);
+      });
+    });
+  }
+
+  if (btnFlipH) {
+    btnFlipH.addEventListener('click', () => {
+      if (!roomCanvas.selectedItem) return;
+      const isFlipped = roomCanvas.toggleItemFlipX(roomCanvas.selectedItem);
+      btnFlipH.classList.toggle('active', isFlipped);
+      showToast(isFlipped ? 'Flipped horizontally' : 'Horizontal flip removed');
+    });
+  }
+
+  if (btnFlipV) {
+    btnFlipV.addEventListener('click', () => {
+      if (!roomCanvas.selectedItem) return;
+      const isFlipped = roomCanvas.toggleItemFlipY(roomCanvas.selectedItem);
+      btnFlipV.classList.toggle('active', isFlipped);
+      showToast(isFlipped ? 'Flipped vertically' : 'Vertical flip removed');
+    });
+  }
 
   // Layer Controls
   btnBringForward.addEventListener('click', () => {

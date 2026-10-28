@@ -231,6 +231,9 @@ class RoomCanvas {
       y: snapped.y,
       width: initW,
       height: initH,
+      rotation: 0,
+      flipX: false,
+      flipY: false,
       zIndex: this.items.length
     };
 
@@ -298,6 +301,9 @@ class RoomCanvas {
         y: item.y,
         width: item.width,
         height: item.height,
+        rotation: Math.round(item.rotation || 0),
+        flipX: !!item.flipX,
+        flipY: !!item.flipY,
         zIndex: item.zIndex,
         hidden: !!item.hidden,
         locked: !!item.locked
@@ -321,7 +327,12 @@ class RoomCanvas {
     }
 
     if (Array.isArray(layoutData.items)) {
-      this.items = layoutData.items.map(item => ({ ...item }));
+      this.items = layoutData.items.map(item => ({
+        ...item,
+        rotation: Number(item.rotation) || 0,
+        flipX: !!item.flipX,
+        flipY: !!item.flipY
+      }));
       
       // Preload any missing sprite images
       this.items.forEach(item => {
@@ -352,14 +363,27 @@ class RoomCanvas {
     this.requestRender();
   }
 
-  // Corner handles in world coordinates
+  // Corner handles in world coordinates (taking rotation into account)
   getHandles(item) {
     if (!item) return null;
+    const cx = item.x + item.width / 2;
+    const cy = item.y + item.height / 2;
+    const hw = item.width / 2;
+    const hh = item.height / 2;
+    const rad = ((item.rotation || 0) * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    const rotatePt = (lx, ly) => ({
+      x: cx + lx * cos - ly * sin,
+      y: cy + lx * sin + ly * cos
+    });
+
     return {
-      nw: { x: item.x, y: item.y, cursor: 'nwse-resize' },
-      ne: { x: item.x + item.width, y: item.y, cursor: 'nesw-resize' },
-      se: { x: item.x + item.width, y: item.y + item.height, cursor: 'nwse-resize' },
-      sw: { x: item.x, y: item.y + item.height, cursor: 'nesw-resize' }
+      nw: { ...rotatePt(-hw, -hh), cursor: 'nwse-resize' },
+      ne: { ...rotatePt(hw, -hh), cursor: 'nesw-resize' },
+      se: { ...rotatePt(hw, hh), cursor: 'nwse-resize' },
+      sw: { ...rotatePt(-hw, hh), cursor: 'nesw-resize' }
     };
   }
 
@@ -379,17 +403,25 @@ class RoomCanvas {
     return null;
   }
 
-  // Hit test items from top to bottom
+  // Hit test items from top to bottom (supports rotated bounds)
   hitTestItem(worldPt) {
     const sorted = [...this.items].sort((a, b) => b.zIndex - a.zIndex);
     for (const item of sorted) {
       if (item.hidden) continue;
-      if (
-        worldPt.x >= item.x &&
-        worldPt.x <= item.x + item.width &&
-        worldPt.y >= item.y &&
-        worldPt.y <= item.y + item.height
-      ) {
+
+      const cx = item.x + item.width / 2;
+      const cy = item.y + item.height / 2;
+      const dx = worldPt.x - cx;
+      const dy = worldPt.y - cy;
+      const rad = -((item.rotation || 0) * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      const localX = dx * cos - dy * sin;
+      const localY = dx * sin + dy * cos;
+      const hw = item.width / 2;
+      const hh = item.height / 2;
+
+      if (localX >= -hw && localX <= hw && localY >= -hh && localY <= hh) {
         return item;
       }
     }
@@ -486,6 +518,43 @@ class RoomCanvas {
     this.notifyListChange();
   }
 
+  // Set rotation in degrees (supports any number specified by user)
+  setItemRotation(item, degrees) {
+    if (!item) return;
+    let deg = Number(degrees);
+    if (isNaN(deg)) deg = 0;
+    item.rotation = Math.round(deg);
+    this.requestRender();
+    if (this.onItemChange) {
+      this.onItemChange(item);
+    }
+    this.notifyListChange();
+  }
+
+  // Toggle Horizontal Flip
+  toggleItemFlipX(item) {
+    if (!item) return false;
+    item.flipX = !item.flipX;
+    this.requestRender();
+    if (this.onItemChange) {
+      this.onItemChange(item);
+    }
+    this.notifyListChange();
+    return item.flipX;
+  }
+
+  // Toggle Vertical Flip
+  toggleItemFlipY(item) {
+    if (!item) return false;
+    item.flipY = !item.flipY;
+    this.requestRender();
+    if (this.onItemChange) {
+      this.onItemChange(item);
+    }
+    this.notifyListChange();
+    return item.flipY;
+  }
+
   duplicateSelectedItem() {
     if (!this.selectedItem) return;
     const orig = this.selectedItem;
@@ -503,6 +572,9 @@ class RoomCanvas {
       y: orig.y + offset / 2,
       width: orig.width,
       height: orig.height,
+      rotation: orig.rotation || 0,
+      flipX: !!orig.flipX,
+      flipY: !!orig.flipY,
       zIndex: this.items.length
     };
     this.items.push(newItem);
@@ -584,6 +656,17 @@ class RoomCanvas {
       }
       if (e.key === 'h' || e.key === 'H') {
         this.setTool('pan');
+        return;
+      }
+
+      // R = Rotate selected item by 45° (Shift+R for -45°)
+      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+        if (this.selectedItem) {
+          e.preventDefault();
+          const delta = e.shiftKey ? -45 : 45;
+          const next = (((this.selectedItem.rotation || 0) + delta) % 360 + 360) % 360;
+          this.setItemRotation(this.selectedItem, next);
+        }
         return;
       }
 
@@ -766,34 +849,49 @@ class RoomCanvas {
       const startW = this.interaction.itemStartSize.width;
       const startH = this.interaction.itemStartSize.height;
 
+      const startCenterX = startPos.x + startW / 2;
+      const startCenterY = startPos.y + startH / 2;
+      const rad = ((item.rotation || 0) * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      // Transform worldPt into local coordinate system centered at item's initial center
+      const dx = worldPt.x - startCenterX;
+      const dy = worldPt.y - startCenterY;
+      const lx = dx * cos + dy * sin;
+      const ly = -dx * sin + dy * cos;
+
       // Mathematical vector projection onto diagonal to preserve exact aspect ratio smoothly:
-      // s = (v_x * W + v_y * H) / (W^2 + H^2)
-      let vx, vy, anchorX, anchorY;
+      let vx, vy, anchorLocalX, anchorLocalY, centerDirX, centerDirY;
 
       if (handle === 'se') {
-        // Anchor top-left
-        anchorX = startPos.x;
-        anchorY = startPos.y;
-        vx = worldPt.x - anchorX;
-        vy = worldPt.y - anchorY;
+        anchorLocalX = -startW / 2;
+        anchorLocalY = -startH / 2;
+        vx = lx - anchorLocalX;
+        vy = ly - anchorLocalY;
+        centerDirX = 0.5;
+        centerDirY = 0.5;
       } else if (handle === 'nw') {
-        // Anchor bottom-right
-        anchorX = startPos.x + startW;
-        anchorY = startPos.y + startH;
-        vx = anchorX - worldPt.x;
-        vy = anchorY - worldPt.y;
+        anchorLocalX = startW / 2;
+        anchorLocalY = startH / 2;
+        vx = anchorLocalX - lx;
+        vy = anchorLocalY - ly;
+        centerDirX = -0.5;
+        centerDirY = -0.5;
       } else if (handle === 'ne') {
-        // Anchor bottom-left
-        anchorX = startPos.x;
-        anchorY = startPos.y + startH;
-        vx = worldPt.x - anchorX;
-        vy = anchorY - worldPt.y;
+        anchorLocalX = -startW / 2;
+        anchorLocalY = startH / 2;
+        vx = lx - anchorLocalX;
+        vy = anchorLocalY - ly;
+        centerDirX = 0.5;
+        centerDirY = -0.5;
       } else if (handle === 'sw') {
-        // Anchor top-right
-        anchorX = startPos.x + startW;
-        anchorY = startPos.y;
-        vx = anchorX - worldPt.x;
-        vy = worldPt.y - anchorY;
+        anchorLocalX = startW / 2;
+        anchorLocalY = -startH / 2;
+        vx = anchorLocalX - lx;
+        vy = ly - anchorLocalY;
+        centerDirX = -0.5;
+        centerDirY = 0.5;
       }
 
       const denom = (startW * startW) + (startH * startH);
@@ -806,23 +904,16 @@ class RoomCanvas {
       const newW = Math.round(startW * scale);
       const newH = Math.round(startH * scale);
 
-      let newX, newY;
-      if (handle === 'se') {
-        newX = anchorX;
-        newY = anchorY;
-      } else if (handle === 'nw') {
-        newX = anchorX - newW;
-        newY = anchorY - newH;
-      } else if (handle === 'ne') {
-        newX = anchorX;
-        newY = anchorY - newH;
-      } else if (handle === 'sw') {
-        newX = anchorX - newW;
-        newY = anchorY;
-      }
+      // Compute local center position relative to startCenter
+      const newLocalCenterX = anchorLocalX + centerDirX * newW;
+      const newLocalCenterY = anchorLocalY + centerDirY * newH;
 
-      item.x = Math.round(newX);
-      item.y = Math.round(newY);
+      // Rotate local center displacement back to world coordinates
+      const worldCenterX = startCenterX + newLocalCenterX * cos - newLocalCenterY * sin;
+      const worldCenterY = startCenterY + newLocalCenterX * sin + newLocalCenterY * cos;
+
+      item.x = Math.round(worldCenterX - newW / 2);
+      item.y = Math.round(worldCenterY - newH / 2);
       item.width = newW;
       item.height = newH;
 
@@ -945,10 +1036,16 @@ class RoomCanvas {
 
   drawHoverOutline(ctx, item) {
     ctx.save();
+    const cx = item.x + item.width / 2;
+    const cy = item.y + item.height / 2;
+    ctx.translate(cx, cy);
+    if (item.rotation) {
+      ctx.rotate((item.rotation * Math.PI) / 180);
+    }
     ctx.strokeStyle = '#06b6d4';
     ctx.lineWidth = 2 / this.view.scale;
     ctx.setLineDash([4 / this.view.scale, 4 / this.view.scale]);
-    ctx.strokeRect(item.x, item.y, item.width, item.height);
+    ctx.strokeRect(-item.width / 2, -item.height / 2, item.width, item.height);
     ctx.restore();
   }
 
@@ -1035,12 +1132,27 @@ class RoomCanvas {
   drawItem(ctx, item) {
     if (item.hidden) return;
     const img = this.library.getImage(item.spriteId);
+
+    ctx.save();
+    const cx = item.x + item.width / 2;
+    const cy = item.y + item.height / 2;
+    ctx.translate(cx, cy);
+
+    if (item.rotation) {
+      ctx.rotate((item.rotation * Math.PI) / 180);
+    }
+
+    const sx = item.flipX ? -1 : 1;
+    const sy = item.flipY ? -1 : 1;
+    if (sx !== 1 || sy !== 1) {
+      ctx.scale(sx, sy);
+    }
+
     if (!img) {
-      ctx.save();
       ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
-      ctx.fillRect(item.x, item.y, item.width, item.height);
+      ctx.fillRect(-item.width / 2, -item.height / 2, item.width, item.height);
       ctx.strokeStyle = '#3b82f6';
-      ctx.strokeRect(item.x, item.y, item.width, item.height);
+      ctx.strokeRect(-item.width / 2, -item.height / 2, item.width, item.height);
       ctx.restore();
 
       const spriteDef = this.library.sprites.find(s => s.id === item.spriteId);
@@ -1050,18 +1162,27 @@ class RoomCanvas {
       return;
     }
 
-    ctx.drawImage(img, item.x, item.y, item.width, item.height);
+    ctx.drawImage(img, -item.width / 2, -item.height / 2, item.width, item.height);
+    ctx.restore();
   }
 
   drawSelection(ctx, item) {
     ctx.save();
 
-    // 1. Selection Bounding Box
+    const cx = item.x + item.width / 2;
+    const cy = item.y + item.height / 2;
+
+    // 1. Selection Bounding Box (rotated with item)
+    ctx.save();
+    ctx.translate(cx, cy);
+    if (item.rotation) {
+      ctx.rotate((item.rotation * Math.PI) / 180);
+    }
     ctx.strokeStyle = '#2563eb';
     ctx.lineWidth = 1.5 / this.view.scale;
     ctx.setLineDash([4 / this.view.scale, 4 / this.view.scale]);
-    ctx.strokeRect(item.x, item.y, item.width, item.height);
-    ctx.setLineDash([]);
+    ctx.strokeRect(-item.width / 2, -item.height / 2, item.width, item.height);
+    ctx.restore();
 
     // 2. Corner Draggable Points (Handles)
     const handles = this.getHandles(item);
@@ -1083,15 +1204,28 @@ class RoomCanvas {
       ctx.fill();
     }
 
-    // 3. Small badge showing current dimensions above sprite
-    const badgeText = `${Math.round(item.width)} × ${Math.round(item.height)} px`;
+    // 3. Small badge showing current dimensions and transform status above sprite
+    let badgeText = `${Math.round(item.width)} × ${Math.round(item.height)} px`;
+    if (item.rotation) {
+      badgeText += ` • ${Math.round(item.rotation)}°`;
+    }
+    if (item.flipX && item.flipY) {
+      badgeText += ` • Flip HV`;
+    } else if (item.flipX) {
+      badgeText += ` • Flip H`;
+    } else if (item.flipY) {
+      badgeText += ` • Flip V`;
+    }
+
     ctx.font = `${Math.max(10, 11 / this.view.scale)}px sans-serif`;
     const textMetrics = ctx.measureText(badgeText);
     const padding = 5 / this.view.scale;
     const badgeW = textMetrics.width + padding * 2;
     const badgeH = 16 / this.view.scale;
-    const badgeX = item.x + item.width / 2 - badgeW / 2;
-    const badgeY = item.y - badgeH - 6 / this.view.scale;
+
+    const minY = Math.min(handles.nw.y, handles.ne.y, handles.se.y, handles.sw.y);
+    const badgeX = cx - badgeW / 2;
+    const badgeY = minY - badgeH - 6 / this.view.scale;
 
     ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
     ctx.beginPath();
@@ -1101,7 +1235,7 @@ class RoomCanvas {
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(badgeText, item.x + item.width / 2, badgeY + badgeH / 2);
+    ctx.fillText(badgeText, cx, badgeY + badgeH / 2);
 
     ctx.restore();
   }
@@ -1116,10 +1250,13 @@ class RoomCanvas {
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const item of visibleItems) {
-      minX = Math.min(minX, item.x);
-      minY = Math.min(minY, item.y);
-      maxX = Math.max(maxX, item.x + item.width);
-      maxY = Math.max(maxY, item.y + item.height);
+      const handles = this.getHandles(item);
+      for (const pt of Object.values(handles)) {
+        minX = Math.min(minX, pt.x);
+        minY = Math.min(minY, pt.y);
+        maxX = Math.max(maxX, pt.x);
+        maxY = Math.max(maxY, pt.y);
+      }
     }
 
     const padding = 40;
@@ -1142,7 +1279,20 @@ class RoomCanvas {
     for (const item of sorted) {
       const img = this.library.getImage(item.spriteId);
       if (img) {
-        offCtx.drawImage(img, item.x - minX, item.y - minY, item.width, item.height);
+        offCtx.save();
+        const cx = item.x + item.width / 2 - minX;
+        const cy = item.y + item.height / 2 - minY;
+        offCtx.translate(cx, cy);
+        if (item.rotation) {
+          offCtx.rotate((item.rotation * Math.PI) / 180);
+        }
+        const sx = item.flipX ? -1 : 1;
+        const sy = item.flipY ? -1 : 1;
+        if (sx !== 1 || sy !== 1) {
+          offCtx.scale(sx, sy);
+        }
+        offCtx.drawImage(img, -item.width / 2, -item.height / 2, item.width, item.height);
+        offCtx.restore();
       }
     }
 
