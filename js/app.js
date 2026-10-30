@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const zoomPercent = document.getElementById('zoomPercent');
   const btnClear = document.getElementById('btnClear');
   const btnExport = document.getElementById('btnExport');
+  const gridSummaryBadge = document.getElementById('gridSummaryBadge');
 
   // DOM Elements - Layout Management (Toolbar)
   const layoutSelect = document.getElementById('layoutSelect');
@@ -190,6 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         roomCanvas.loadLayoutData(activeLayout);
         if (activeLayout.gridSize) {
           gridSizeInput.value = activeLayout.gridSize;
+          updateGridBadge(activeLayout.gridSize);
           roomCanvas.setGridSize(activeLayout.gridSize);
         }
         if (activeLayout.gridType) {
@@ -203,6 +205,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     createStarterRoom(library, roomCanvas);
   }
 
+  updateGridBadge();
+  initCollapsibleToolbar();
   renderPlacedList();
   if (typeof populateLayoutSelect === 'function') {
     populateLayoutSelect();
@@ -1314,6 +1318,61 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // =========================================================================
+  // Collapsible Toolbar Groups (Horizontal expand / collapse)
+  // =========================================================================
+
+  function updateGridBadge(size) {
+    if (!gridSummaryBadge) return;
+    const val = size !== undefined ? size : (gridSizeInput ? gridSizeInput.value : 64);
+    gridSummaryBadge.textContent = `Grid: ${val}px`;
+  }
+
+  function initCollapsibleToolbar() {
+    const STORAGE_KEY = 'isoroom_toolbar_groups_v1';
+    let groupStates = {
+      grid: false,
+      view: false,
+      layout: false
+    };
+
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        groupStates = Object.assign(groupStates, JSON.parse(saved));
+      }
+    } catch (e) {
+      console.warn('Failed to parse toolbar group states from localStorage:', e);
+    }
+
+    const groups = document.querySelectorAll('.tool-group-collapsible');
+    groups.forEach(group => {
+      const groupKey = group.dataset.group;
+      const toggleBtn = group.querySelector('.tool-group-toggle');
+      if (!groupKey || !toggleBtn) return;
+
+      // Apply initial state
+      if (groupStates[groupKey] === true) {
+        group.classList.add('is-expanded');
+      } else {
+        group.classList.remove('is-expanded');
+      }
+
+      toggleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const willExpand = !group.classList.contains('is-expanded');
+        group.classList.toggle('is-expanded', willExpand);
+        groupStates[groupKey] = willExpand;
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(groupStates));
+        } catch (err) {
+          // Ignore localStorage errors
+        }
+      });
+    });
+  }
+
+  // =========================================================================
   // Toolbar Controls (Grid & Viewport)
   // =========================================================================
 
@@ -1322,6 +1381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (isNaN(val) || val < 8) val = 8;
     if (val > 256) val = 256;
     gridSizeInput.value = val;
+    updateGridBadge(val);
     roomCanvas.grid.size = val;
     roomCanvas.requestRender();
     showToast(`Grid size set to ${val}px`);
@@ -1439,6 +1499,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         roomCanvas.loadLayoutData(active);
         if (active.gridSize) {
           gridSizeInput.value = active.gridSize;
+          updateGridBadge(active.gridSize);
           roomCanvas.setGridSize(active.gridSize);
         }
         if (active.gridType) {
@@ -1693,6 +1754,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       roomCanvas.loadLayoutData(layout);
       if (layout.gridSize) {
         gridSizeInput.value = layout.gridSize;
+        updateGridBadge(layout.gridSize);
         roomCanvas.setGridSize(layout.gridSize);
       }
       if (layout.gridType) {
