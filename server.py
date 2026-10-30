@@ -9,10 +9,12 @@ Custom development HTTP server for IsoRoom Studio.
 import os
 import json
 import base64
+import re
+import time
 import http.server
 import socketserver
 import urllib.parse
-from update_manifest import scan_assets, main as update_manifest_files
+from update_manifest import scan_assets, load_category_overrides, save_category_overrides, main as update_manifest_files
 
 PORT = 8000
 
@@ -29,6 +31,41 @@ class IsoRoomHTTPHandler(http.server.SimpleHTTPRequestHandler):
 
             sprites = scan_assets()
             data = json.dumps(sprites).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
+        # API endpoint to list sprite packs
+        if parsed.path == '/api/packs':
+            sprites = scan_assets()
+            pack_counts = {}
+            for s in sprites:
+                p = s.get('pack') or 'Core'
+                pack_counts[p] = pack_counts.get(p, 0) + 1
+
+            # Also discover any empty pack folders in assets/sprites/
+            sprites_dir = os.path.join('assets', 'sprites')
+            if os.path.isdir(sprites_dir):
+                for sd in os.listdir(sprites_dir):
+                    subpath = os.path.join(sprites_dir, sd)
+                    if os.path.isdir(subpath) and sd.lower() not in ('sprites', 'packs', 'images', 'icons'):
+                        pname = sd.replace('_', ' ').replace('-', ' ').title()
+                        if pname not in pack_counts:
+                            pack_counts[pname] = 0
+
+            packs = []
+            for name, count in pack_counts.items():
+                packs.append({
+                    'name': name,
+                    'id': name.lower().replace(' ', '_'),
+                    'count': count
+                })
+            packs.sort(key=lambda x: (0 if x['name'] == 'Core' else 1, x['name'].lower()))
+            data = json.dumps(packs).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(data)))
@@ -79,44 +116,120 @@ class IsoRoomHTTPHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+
+        # Create sprite pack folder in assets/sprites/
+        if parsed.path == '/api/create-pack':
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(content_length).decode('utf-8')
+                payload = json.loads(body)
+                name = payload.get('name', '').strip()
+                if not name:
+                    raise ValueError('Pack name required')
+                slug = re.sub(r'[^a-zA-Z0-9_-]', '_', name.lower())
+                target_dir = os.path.join('assets', 'sprites', slug)
+                os.makedirs(target_dir, exist_ok=True)
+                display_name = slug.replace('_', ' ').replace('-', ' ').title()
+                res = json.dumps({
+                    'success': True,
+                    'name': display_name,
+                    'id': slug,
+                    'path': f"assets/sprites/{slug}"
+                }).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(res)))
+                self.end_headers()
+                self.wfile.write(res)
+                return
+            except Exception as e:
+                err = json.dumps({'success': False, 'error': str(e)}).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(err)))
+                self.end_headers()
+                self.wfile.write(err)
+                return
         
-        # Save transparent sprite directly to assets/sprites/
-        if parsed.path == '/api/save-sprite':
+        # Save transparent or uploaded/dropped sprite directly to assets/sprites/
+        if parsed.path in ('/api/save-sprite', '/api/upload-sprite'):
             try:
                 content_length = int(self.headers.get('Content-Length', 0))
                 body = self.rfile.read(content_length).decode('utf-8')
                 payload = json.loads(body)
                 
-                filename = payload.get('filename', 'sprite_transparent.png')
+                raw_filename = payload.get('filename', 'sprite.png')
                 data_url = payload.get('dataUrl', '')
+                pack = payload.get('pack', '').strip()
+                overwrite = bool(payload.get('overwrite', False))
                 
-                # Sanitize filename
-                filename = os.path.basename(filename)
-                if not filename.lower().endswith('.png'):
-                    filename += '.png'
+                # Sanitize filename while keeping valid extension
+                raw_base = os.path.basename(raw_filename)
+                name_part, ext_part = os.path.splitext(raw_base)
+                ext = ext_part.lower()
+                VALID_EXTS_LIST = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']
+                if ext not in VALID_EXTS_LIST:
+                    ext = '.png'
+                name_part = re.sub(r'[^a-zA-Z0-9_\-\. ]', '_', name_part).strip()
+                if not name_part:
+                    name_part = f"sprite_{int(time.time())}"
+                
+                # If overwriting with transparent background image, format is PNG
+                if overwrite and ext != '.png':
+                    ext = '.png'
+                safe_filename = f"{name_part}{ext}"
+                
+                # Determine target directory and pack slug
+                pack_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', pack.lower().strip()) if pack else ''
+                if pack_slug and pack_slug not in ('core', 'all', 'all_packs'):
+                    target_dir = os.path.join('assets', 'sprites', pack_slug)
+                    save_rel = f"assets/sprites/{pack_slug}/{safe_filename}".replace('\\', '/')
+                    display_pack = pack_slug.replace('_', ' ').replace('-', ' ').title()
+                else:
+                    target_dir = os.path.join('assets', 'sprites')
+                    save_rel = f"assets/sprites/{safe_filename}".replace('\\', '/')
+                    display_pack = 'Core'
                     
-                target_dir = os.path.join('assets', 'sprites')
                 os.makedirs(target_dir, exist_ok=True)
-                target_path = os.path.join(target_dir, filename)
+                target_path = os.path.join(target_dir, safe_filename)
                 
-                # Extract base64
+                # If overwriting, remove any previous non-PNG file with the old name
+                if overwrite and raw_base:
+                    for root, dirs, files in os.walk('assets'):
+                        if raw_base in files:
+                            old_cand = os.path.join(root, raw_base)
+                            if os.path.abspath(old_cand) != os.path.abspath(target_path):
+                                try:
+                                    os.remove(old_cand)
+                                except Exception:
+                                    pass
+                
+                # Extract and decode base64 / url-encoded image data
                 if ',' in data_url:
-                    data_url = data_url.split(',', 1)[1]
+                    header, data_str = data_url.split(',', 1)
+                    if ';base64' in header or not header.startswith('data:'):
+                        img_data = base64.b64decode(data_str)
+                    else:
+                        img_data = urllib.parse.unquote_to_bytes(data_str)
+                else:
+                    img_data = base64.b64decode(data_url)
                     
-                img_data = base64.b64decode(data_url)
                 with open(target_path, 'wb') as f:
                     f.write(img_data)
                     
-                print(f"[Server] Saved transparent sprite: {target_path} ({len(img_data)} bytes)")
+                print(f"[Server] Saved sprite to disk: {target_path} ({len(img_data)} bytes)")
                 
-                # Update manifest
+                # Re-scan assets and update manifest files
                 update_manifest_files()
                 
                 response_data = json.dumps({
                     'success': True,
-                    'path': target_path,
-                    'filename': filename,
-                    'message': f'Saved {filename} to {target_path}'
+                    'path': save_rel,
+                    'filename': safe_filename,
+                    'oldFilename': raw_base,
+                    'pack': display_pack,
+                    'bytes': len(img_data),
+                    'message': f'Saved {safe_filename} to {save_rel}'
                 }).encode('utf-8')
                 
                 self.send_response(200)
@@ -170,6 +283,55 @@ class IsoRoomHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"[Server] Error deleting sprite: {e}")
                 err_data = json.dumps({'success': False, 'error': str(e)}).encode('utf-8')
                 self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(err_data)))
+                self.end_headers()
+                self.wfile.write(err_data)
+                return
+
+        # Update sprite category override in assets/categories.json and update manifests
+        if parsed.path == '/api/update-category':
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(content_length).decode('utf-8')
+                payload = json.loads(body)
+                
+                filename = payload.get('filename', '').strip()
+                sprite_id = payload.get('spriteId', '').strip()
+                category = payload.get('category', '').strip()
+                
+                if not category or (not filename and not sprite_id):
+                    raise ValueError('Category and filename/spriteId are required')
+                
+                overrides = load_category_overrides()
+                if filename:
+                    overrides[filename] = category
+                    overrides[filename.lower()] = category
+                if sprite_id:
+                    overrides[sprite_id] = category
+                    overrides[sprite_id.lower()] = category
+                    
+                save_category_overrides(overrides)
+                update_manifest_files()
+                
+                print(f"[Server] Updated category for {filename or sprite_id} -> {category}")
+                
+                res = json.dumps({
+                    'success': True,
+                    'filename': filename,
+                    'spriteId': sprite_id,
+                    'category': category
+                }).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(res)))
+                self.end_headers()
+                self.wfile.write(res)
+                return
+            except Exception as e:
+                print(f"[Server] Error updating category: {e}")
+                err_data = json.dumps({'success': False, 'error': str(e)}).encode('utf-8')
+                self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(err_data)))
                 self.end_headers()

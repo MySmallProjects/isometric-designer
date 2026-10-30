@@ -75,6 +75,12 @@ function scan_assets_directory($assets_dir, $base_dir, $valid_extensions) {
         return $items;
     }
 
+    $categories_file = $assets_dir . '/categories.json';
+    $cat_overrides = [];
+    if (file_exists($categories_file)) {
+        $cat_overrides = json_decode(file_get_contents($categories_file), true) ?: [];
+    }
+
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($assets_dir, RecursiveDirectoryIterator::SKIP_DOTS),
         RecursiveIteratorIterator::SELF_FIRST
@@ -88,9 +94,17 @@ function scan_assets_directory($assets_dir, $base_dir, $valid_extensions) {
                 $pathname = $fileinfo->getPathname();
                 $rel_path = str_replace('\\', '/', ltrim(str_replace($base_dir, '', $pathname), '/\\'));
                 $fname_lower = strtolower($filename);
+                $name_no_ext = pathinfo($filename, PATHINFO_FILENAME);
+                $id = strtolower(str_replace(' ', '_', $name_no_ext));
 
-                // Category inference
-                if (preg_match('/(lamp|light|candle|lantern|pendant)/i', $fname_lower)) {
+                // Check manual category override first
+                if (isset($cat_overrides[$filename])) {
+                    $category = $cat_overrides[$filename];
+                } elseif (isset($cat_overrides[$fname_lower])) {
+                    $category = $cat_overrides[$fname_lower];
+                } elseif (isset($cat_overrides[$id])) {
+                    $category = $cat_overrides[$id];
+                } elseif (preg_match('/(lamp|light|candle|lantern|pendant)/i', $fname_lower)) {
                     $category = 'Lighting';
                 } elseif (preg_match('/(shelf|bookshelf|storage|wardrobe|cabinet|dresser)/i', $fname_lower)) {
                     $category = 'Storage';
@@ -255,6 +269,7 @@ switch ($endpoint) {
         break;
 
     case 'save-sprite':
+    case 'upload-sprite':
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
             echo json_encode(['error' => 'Method Not Allowed']);
@@ -270,19 +285,32 @@ switch ($endpoint) {
             exit;
         }
 
-        $filename = basename($data['filename'] ?? 'sprite_transparent.png');
-        if (!preg_match('/\.png$/i', $filename)) {
-            $filename .= '.png';
+        $raw_filename = basename($data['filename'] ?? 'sprite.png');
+        $ext = strtolower(pathinfo($raw_filename, PATHINFO_EXTENSION));
+        $name_part = pathinfo($raw_filename, PATHINFO_FILENAME);
+        $name_part = preg_replace('/[^a-zA-Z0-9_\-\. ]/', '_', trim($name_part));
+        if (empty($name_part)) {
+            $name_part = 'sprite_' . time();
         }
+        if (!in_array($ext, $valid_extensions, true)) {
+            $ext = 'png';
+        }
+        $overwrite = !empty($data['overwrite']);
+        if ($overwrite && $ext !== 'png') {
+            $ext = 'png';
+        }
+        $filename = $name_part . '.' . $ext;
 
         $pack = trim($data['pack'] ?? '');
         $pack_slug = preg_replace('/[^a-z0-9_-]/i', '_', strtolower($pack));
-        if (!empty($pack_slug) && $pack_slug !== 'core' && $pack_slug !== 'all') {
+        if (!empty($pack_slug) && $pack_slug !== 'core' && $pack_slug !== 'all' && $pack_slug !== 'all_packs') {
             $target_dir = $assets_dir . '/sprites/' . $pack_slug;
             $save_rel = 'assets/sprites/' . $pack_slug . '/' . $filename;
+            $display_pack = ucwords(str_replace(['_', '-'], ' ', $pack_slug));
         } else {
             $target_dir = $assets_dir . '/sprites';
             $save_rel = 'assets/sprites/' . $filename;
+            $display_pack = 'Core';
         }
 
         if (!is_dir($target_dir)) {
@@ -290,17 +318,40 @@ switch ($endpoint) {
         }
 
         $target_path = $target_dir . '/' . $filename;
+
+        // If overwriting, remove old file if name/extension changed
+        if ($overwrite && !empty($raw_filename)) {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($assets_dir, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::SELF_FIRST
+            );
+            foreach ($iterator as $fileinfo) {
+                if ($fileinfo->isFile() && $fileinfo->getFilename() === $raw_filename) {
+                    if (realpath($fileinfo->getPathname()) !== realpath($target_path)) {
+                        @unlink($fileinfo->getPathname());
+                    }
+                }
+            }
+        }
+
         $data_url = $data['dataUrl'];
 
         if (strpos($data_url, ',') !== false) {
             $parts = explode(',', $data_url, 2);
-            $data_url = $parts[1];
+            $header = $parts[0];
+            $encoded = $parts[1];
+            if (strpos($header, ';base64') !== false || strpos($header, 'data:') !== 0) {
+                $binary = base64_decode($encoded);
+            } else {
+                $binary = urldecode($encoded);
+            }
+        } else {
+            $binary = base64_decode($data_url);
         }
 
-        $binary = base64_decode($data_url);
         if ($binary === false) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Base64 decoding failed']);
+            echo json_encode(['success' => false, 'error' => 'Data decoding failed']);
             exit;
         }
 
@@ -319,8 +370,9 @@ switch ($endpoint) {
             'success' => true,
             'path' => $save_rel,
             'filename' => $filename,
+            'pack' => $display_pack,
             'bytes' => $written,
-            'message' => "Saved {$filename} successfully."
+            'message' => "Saved {$filename} successfully to {$save_rel}."
         ], JSON_UNESCAPED_SLASHES);
         break;
 
@@ -360,6 +412,52 @@ switch ($endpoint) {
             'success' => true,
             'deleted' => $deleted,
             'filename' => $filename
+        ], JSON_UNESCAPED_SLASHES);
+        break;
+
+    case 'update-category':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method Not Allowed']);
+            exit;
+        }
+
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        $filename = trim($data['filename'] ?? '');
+        $sprite_id = trim($data['spriteId'] ?? '');
+        $category = trim($data['category'] ?? '');
+
+        if (empty($category) || (empty($filename) && empty($sprite_id))) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Category and filename/spriteId are required']);
+            exit;
+        }
+
+        $categories_file = $assets_dir . '/categories.json';
+        $overrides = [];
+        if (file_exists($categories_file)) {
+            $overrides = json_decode(file_get_contents($categories_file), true) ?: [];
+        }
+        if (!empty($filename)) {
+            $overrides[$filename] = $category;
+            $overrides[strtolower($filename)] = $category;
+        }
+        if (!empty($sprite_id)) {
+            $overrides[$sprite_id] = $category;
+            $overrides[strtolower($sprite_id)] = $category;
+        }
+
+        @file_put_contents($categories_file, json_encode($overrides, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        $sprites = scan_assets_directory($assets_dir, $base_dir, $valid_extensions);
+        update_manifest_files($sprites, $assets_dir);
+
+        echo json_encode([
+            'success' => true,
+            'filename' => $filename,
+            'spriteId' => $sprite_id,
+            'category' => $category
         ], JSON_UNESCAPED_SLASHES);
         break;
 

@@ -369,6 +369,20 @@
               <span class="info-val" id="inspFilename">-</span>
             </div>
             <div class="info-row">
+              <span class="info-key">Category</span>
+              <div class="info-val" style="padding: 0;">
+                <select id="inspCategorySelect" class="insp-category-select" title="Change category in sprite library and manifest">
+                  <option value="Furniture">Furniture</option>
+                  <option value="Floors">Floors</option>
+                  <option value="Walls">Walls</option>
+                  <option value="Storage">Storage</option>
+                  <option value="Decor">Decor</option>
+                  <option value="Lighting">Lighting</option>
+                  <option value="Custom">Custom</option>
+                </select>
+              </div>
+            </div>
+            <div class="info-row">
               <span class="info-key">Original Size</span>
               <span class="info-val" id="inspOrigDimensions">-</span>
             </div>
@@ -649,12 +663,19 @@
             </svg>
             Download PNG
           </button>
-          <button id="btnSaveToAssets" class="btn" title="Save directly into assets/sprites folder on disk">
+          <button id="btnSaveOverwrite" class="btn" title="Overwrite sprite in library">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17 21 17 13 7 13 7 21"/>
             </svg>
-            Save to Assets
+            Save
+          </button>
+          <button id="btnSaveToAssets" class="btn" title="Save a new asset copy in the library">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Save as New Asset
           </button>
           <button id="btnApplyTransparent" class="btn btn-primary" title="Apply transparent background to sprite on canvas">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

@@ -586,5 +586,229 @@
       "flooring and rugs",
       "svg"
     ]
+  },
+  {
+    "id": "desk1",
+    "name": "Desk1",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "desk1.png",
+    "src": "assets/sprites/test/desk1.png",
+    "tags": [
+      "furniture",
+      "test",
+      "png"
+    ]
+  },
+  {
+    "id": "desk1_transparent",
+    "name": "Desk1 Transparent",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "desk1_transparent.png",
+    "src": "assets/sprites/test/desk1_transparent.png",
+    "tags": [
+      "furniture",
+      "test",
+      "png"
+    ]
+  },
+  {
+    "id": "desk2",
+    "name": "Desk2",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "desk2.png",
+    "src": "assets/sprites/test/desk2.png",
+    "tags": [
+      "furniture",
+      "test",
+      "png"
+    ]
+  },
+  {
+    "id": "desk3",
+    "name": "Desk3",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "desk3.jpeg",
+    "src": "assets/sprites/test/desk3.jpeg",
+    "tags": [
+      "furniture",
+      "test",
+      "jpeg"
+    ]
+  },
+  {
+    "id": "desk4",
+    "name": "Desk4",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "desk4.jpeg",
+    "src": "assets/sprites/test/desk4.jpeg",
+    "tags": [
+      "furniture",
+      "test",
+      "jpeg"
+    ]
+  },
+  {
+    "id": "desk5",
+    "name": "Desk5",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "desk5.png",
+    "src": "assets/sprites/test/desk5.png",
+    "tags": [
+      "furniture",
+      "test",
+      "png"
+    ]
+  },
+  {
+    "id": "desk5_transparent",
+    "name": "Desk5 Transparent",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "desk5_transparent.png",
+    "src": "assets/sprites/test/desk5_transparent.png",
+    "tags": [
+      "furniture",
+      "test",
+      "png"
+    ]
+  },
+  {
+    "id": "server1",
+    "name": "Server1",
+    "category": "Decor",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "server1.png",
+    "src": "assets/sprites/test/server1.png",
+    "tags": [
+      "decor",
+      "test",
+      "png"
+    ]
+  },
+  {
+    "id": "server2",
+    "name": "Server2",
+    "category": "Decor",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "server2.jpeg",
+    "src": "assets/sprites/test/server2.jpeg",
+    "tags": [
+      "decor",
+      "test",
+      "jpeg"
+    ]
+  },
+  {
+    "id": "server3",
+    "name": "Server3",
+    "category": "Decor",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "server3.jpeg",
+    "src": "assets/sprites/test/server3.jpeg",
+    "tags": [
+      "decor",
+      "test",
+      "jpeg"
+    ]
+  },
+  {
+    "id": "server4",
+    "name": "Server4",
+    "category": "Decor",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "server4.jpeg",
+    "src": "assets/sprites/test/server4.jpeg",
+    "tags": [
+      "decor",
+      "test",
+      "jpeg"
+    ]
+  },
+  {
+    "id": "sofa",
+    "name": "Sofa",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "sofa.png",
+    "src": "assets/sprites/test/sofa.png",
+    "tags": [
+      "furniture",
+      "test",
+      "png"
+    ]
+  },
+  {
+    "id": "sofa2",
+    "name": "Sofa2",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "sofa2.jpeg",
+    "src": "assets/sprites/test/sofa2.jpeg",
+    "tags": [
+      "furniture",
+      "test",
+      "jpeg"
+    ]
+  },
+  {
+    "id": "sofa3",
+    "name": "Sofa3",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "sofa3.jpeg",
+    "src": "assets/sprites/test/sofa3.jpeg",
+    "tags": [
+      "furniture",
+      "test",
+      "jpeg"
+    ]
+  },
+  {
+    "id": "sofa3_transparent",
+    "name": "Sofa3 Transparent",
+    "category": "Furniture",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "sofa3_transparent.png",
+    "src": "assets/sprites/test/sofa3_transparent.png",
+    "tags": [
+      "furniture",
+      "test",
+      "png"
+    ]
+  },
+  {
+    "id": "v8",
+    "name": "V8",
+    "category": "Decor",
+    "pack": "Test",
+    "packId": "test",
+    "filename": "v8.jpeg",
+    "src": "assets/sprites/test/v8.jpeg",
+    "tags": [
+      "decor",
+      "test",
+      "jpeg"
+    ]
   }
 ]

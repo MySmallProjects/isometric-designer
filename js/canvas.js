@@ -53,6 +53,7 @@ class RoomCanvas {
 
     // Callbacks
     this.hoveredItem = null;
+    this.itemImages = new Map();
     this.onSelectionChange = null;
     this.onItemChange = null;
     this.onToolChange = null;
@@ -222,6 +223,7 @@ class RoomCanvas {
       id: 'item_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
       spriteId: sprite.id,
       name: sprite.name,
+      category: sprite.category || 'Decor',
       filename: sprite.filename,
       src: sprite.src,
       origWidth: origW,
@@ -292,6 +294,7 @@ class RoomCanvas {
         id: item.id,
         spriteId: item.spriteId,
         name: item.name,
+        category: item.category || 'Decor',
         filename: item.filename,
         src: item.src,
         origWidth: item.origWidth,
@@ -336,21 +339,109 @@ class RoomCanvas {
       
       // Preload any missing sprite images
       this.items.forEach(item => {
-        const img = this.library.getImage(item.spriteId);
+        const img = this.getItemImage(item);
         if (!img) {
-          const spriteDef = this.library.sprites.find(s => s.id === item.spriteId) || {
-            id: item.spriteId,
-            name: item.name || 'Sprite',
-            filename: item.filename || `${item.spriteId}.png`,
-            src: item.src || `assets/${item.filename}`
-          };
-          this.library.preload(spriteDef).then(() => this.requestRender());
+          this.ensureItemImageLoaded(item);
         }
       });
     }
 
     this.requestRender();
     this.notifyListChange();
+  }
+
+  // Get loaded HTMLImageElement for an item, prioritizing custom transparent data URLs, itemImages, spriteId, filename, or src
+  getItemImage(item) {
+    if (!item) return null;
+
+    // Check item-specific image cache (e.g. data URLs applied via background remover)
+    if (this.itemImages && this.itemImages.has(item.id)) {
+      return this.itemImages.get(item.id);
+    }
+
+    // If item has a custom data URL, check if loaded
+    if (item.src && item.src.startsWith('data:')) {
+      const img = this.library.getImageBySrc(item.src);
+      if (img) {
+        if (!this.itemImages) this.itemImages = new Map();
+        this.itemImages.set(item.id, img);
+        return img;
+      }
+      return null;
+    }
+
+    let img = this.library.getImage(item.spriteId);
+    if (img) return img;
+
+    if (item.filename) {
+      img = this.library.getImageByFilename(item.filename);
+      if (img) {
+        if (item.spriteId) this.library.loadedImages.set(item.spriteId, img);
+        return img;
+      }
+    }
+
+    if (item.src) {
+      img = this.library.getImageBySrc(item.src);
+      if (img) {
+        if (item.spriteId) this.library.loadedImages.set(item.spriteId, img);
+        return img;
+      }
+    }
+
+    return null;
+  }
+
+  // Ensure an item's sprite image is loaded into memory and trigger canvas re-render
+  ensureItemImageLoaded(item) {
+    if (!item) return;
+    if (this.getItemImage(item)) return;
+    if (item._loadingImage) return;
+    item._loadingImage = true;
+
+    // Handle custom data URLs directly
+    if (item.src && item.src.startsWith('data:')) {
+      const img = new Image();
+      img.onload = () => {
+        item._loadingImage = false;
+        if (!this.itemImages) this.itemImages = new Map();
+        this.itemImages.set(item.id, img);
+        this.library.loadedImages.set(item.src, img);
+        this.requestRender();
+      };
+      img.onerror = () => {
+        item._loadingImage = false;
+      };
+      img.src = item.src;
+      return;
+    }
+
+    const spriteDef = this.library.findSprite(item.spriteId) ||
+                      this.library.findSprite(item.filename) ||
+                      this.library.findSprite(item.src) || {
+                        id: item.spriteId || ('sprite_' + (item.filename || 'img').replace(/[^a-zA-Z0-9_-]/g, '_')),
+                        name: item.name || 'Sprite',
+                        filename: item.filename,
+                        src: item.src || (item.filename ? `assets/sprites/${item.filename}` : '')
+                      };
+
+    this.library.loadImage(spriteDef).then((img) => {
+      item._loadingImage = false;
+      if (img) {
+        if (item.spriteId) {
+          this.library.loadedImages.set(item.spriteId, img);
+        }
+        if (item.filename) {
+          this.library.loadedImages.set(item.filename.toLowerCase(), img);
+        }
+        if (item.src) {
+          this.library.loadedImages.set(item.src, img);
+        }
+        this.requestRender();
+      }
+    }).catch(() => {
+      item._loadingImage = false;
+    });
   }
 
   // Select/Deselect item
@@ -1131,7 +1222,7 @@ class RoomCanvas {
 
   drawItem(ctx, item) {
     if (item.hidden) return;
-    const img = this.library.getImage(item.spriteId);
+    const img = this.getItemImage(item);
 
     ctx.save();
     const cx = item.x + item.width / 2;
@@ -1155,10 +1246,7 @@ class RoomCanvas {
       ctx.strokeRect(-item.width / 2, -item.height / 2, item.width, item.height);
       ctx.restore();
 
-      const spriteDef = this.library.sprites.find(s => s.id === item.spriteId);
-      if (spriteDef) {
-        this.library.loadImage(spriteDef).then(() => this.requestRender());
-      }
+      this.ensureItemImageLoaded(item);
       return;
     }
 
@@ -1277,7 +1365,7 @@ class RoomCanvas {
 
     const sorted = [...visibleItems].sort((a, b) => a.zIndex - b.zIndex);
     for (const item of sorted) {
-      const img = this.library.getImage(item.spriteId);
+      const img = this.getItemImage(item);
       if (img) {
         offCtx.save();
         const cx = item.x + item.width / 2 - minX;

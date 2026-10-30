@@ -7,6 +7,21 @@ import os
 import json
 
 VALID_EXTS = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'}
+CATEGORIES_FILE = os.path.join('assets', 'categories.json')
+
+def load_category_overrides():
+    if os.path.isfile(CATEGORIES_FILE):
+        try:
+            with open(CATEGORIES_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: could not read {CATEGORIES_FILE}: {e}")
+    return {}
+
+def save_category_overrides(overrides):
+    os.makedirs('assets', exist_ok=True)
+    with open(CATEGORIES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(overrides, f, indent=2)
 
 def get_pack_name(rel_path):
     rel_from_assets = os.path.relpath(rel_path, 'assets')
@@ -29,15 +44,25 @@ def scan_assets():
     if not os.path.isdir(assets_dir):
         return found
 
+    category_overrides = load_category_overrides()
+
     for root, dirs, files in os.walk(assets_dir):
         for file in sorted(files):
             ext = os.path.splitext(file)[1].lower()
             if ext in VALID_EXTS:
                 rel_path = os.path.relpath(os.path.join(root, file), '.').replace('\\', '/')
                 fname_lower = file.lower()
+                base_name = os.path.splitext(file)[0].lower()
                 
-                # Category inference with priority
-                if any(w in fname_lower for w in ['lamp', 'light', 'candle', 'lantern', 'pendant']):
+                # Check manual category override first
+                if file in category_overrides:
+                    category = category_overrides[file]
+                elif fname_lower in category_overrides:
+                    category = category_overrides[fname_lower]
+                elif base_name in category_overrides:
+                    category = category_overrides[base_name]
+                # Fallback to keyword-based category inference
+                elif any(w in fname_lower for w in ['lamp', 'light', 'candle', 'lantern', 'pendant']):
                     category = 'Lighting'
                 elif any(w in fname_lower for w in ['shelf', 'bookshelf', 'storage', 'wardrobe', 'cabinet', 'dresser']):
                     category = 'Storage'

@@ -104,8 +104,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnCloseInspector = document.getElementById('btnCloseInspector');
   const inspPreviewImg = document.getElementById('inspPreviewImg');
   const inspFilename = document.getElementById('inspFilename');
+  const inspCategorySelect = document.getElementById('inspCategorySelect');
   const inspOrigDimensions = document.getElementById('inspOrigDimensions');
   const inspPosition = document.getElementById('inspPosition');
+  let activeInspectedSprite = null;
   const inspWidthInput = document.getElementById('inspWidthInput');
   const inspHeightInput = document.getElementById('inspHeightInput');
   const btnToggleAspect = document.getElementById('btnToggleAspect');
@@ -142,8 +144,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const bgModeRadios = document.querySelectorAll('input[name="bgMode"]');
   const bgSmoothEdges = document.getElementById('bgSmoothEdges');
   const btnDownloadTransparentPng = document.getElementById('btnDownloadTransparentPng');
+  const btnSaveOverwrite = document.getElementById('btnSaveOverwrite');
   const btnSaveToAssets = document.getElementById('btnSaveToAssets');
   const btnApplyTransparent = document.getElementById('btnApplyTransparent');
+  let sessionBgTolerance = 20;
 
   // Toast Notification Container
   const toastContainer = document.getElementById('toastContainer');
@@ -223,9 +227,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   roomCanvas.onSelectionChange = (item) => {
     if (item) {
+      activeInspectedSprite = null;
       updateInspectorValues(item);
       inspectorPanel.classList.add('is-open');
-    } else {
+    } else if (!activeInspectedSprite) {
       inspectorPanel.classList.remove('is-open');
     }
     renderPlacedList(false);
@@ -251,11 +256,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   function updateInspectorValues(item, updateInputs = true) {
+    activeInspectedSprite = null;
     inspPreviewImg.src = item.src;
     inspFilename.textContent = item.filename;
     inspFilename.title = item.filename;
     inspOrigDimensions.textContent = `${item.origWidth} × ${item.origHeight} px`;
     inspPosition.textContent = `X: ${Math.round(item.x)}, Y: ${Math.round(item.y)}`;
+
+    if (inspCategorySelect) {
+      const sprite = library.findSprite(item.spriteId) || library.findSprite(item.filename);
+      const cat = item.category || (sprite ? sprite.category : 'Decor') || 'Decor';
+      inspCategorySelect.value = cat;
+    }
 
     if (updateInputs) {
       inspWidthInput.value = Math.round(item.width);
@@ -277,6 +289,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sx = item.flipX ? -1 : 1;
     const sy = item.flipY ? -1 : 1;
     inspPreviewImg.style.transform = `rotate(${rot}deg) scale(${sx}, ${sy})`;
+  }
+
+  function openInspectorForLibrarySprite(sprite) {
+    if (!sprite) return;
+    activeInspectedSprite = sprite;
+    roomCanvas.selectItem(null);
+
+    inspPreviewImg.src = sprite.src;
+    inspPreviewImg.style.transform = 'none';
+    inspFilename.textContent = sprite.filename;
+    inspFilename.title = sprite.filename;
+    if (inspCategorySelect) {
+      inspCategorySelect.value = sprite.category || 'Decor';
+    }
+    inspOrigDimensions.textContent = `${sprite.width || 64} × ${sprite.height || 64} px`;
+    inspPosition.textContent = 'Library Item';
+
+    if (inspWidthInput) inspWidthInput.value = Math.round(sprite.width || 64);
+    if (inspHeightInput) inspHeightInput.value = Math.round(sprite.height || 64);
+    if (inspRotationInput) inspRotationInput.value = 0;
+    if (btnFlipH) btnFlipH.classList.remove('active');
+    if (btnFlipV) btnFlipV.classList.remove('active');
+
+    inspectorPanel.classList.add('is-open');
   }
 
   // =========================================================================
@@ -611,8 +647,58 @@ document.addEventListener('DOMContentLoaded', async () => {
   // =========================================================================
 
   btnCloseInspector.addEventListener('click', () => {
+    activeInspectedSprite = null;
     roomCanvas.selectItem(null);
+    inspectorPanel.classList.remove('is-open');
   });
+
+  // Category Selection Change in Inspector
+  if (inspCategorySelect) {
+    inspCategorySelect.addEventListener('change', async () => {
+      const newCat = inspCategorySelect.value;
+      if (!newCat) return;
+
+      const target = roomCanvas.selectedItem || activeInspectedSprite;
+      if (!target) return;
+
+      const targetId = target.spriteId || target.id;
+      const targetFilename = target.filename;
+
+      // Update on active canvas item
+      if (roomCanvas.selectedItem) {
+        roomCanvas.selectedItem.category = newCat;
+      }
+      if (activeInspectedSprite) {
+        activeInspectedSprite.category = newCat;
+      }
+
+      // Update library sprite definition & persist to server/localStorage
+      try {
+        await library.updateSpriteCategory(targetFilename || targetId, newCat);
+      } catch (catErr) {
+        console.warn('Failed to persist category to server, saved locally:', catErr);
+      }
+
+      // Update any placed items on canvas matching this sprite
+      roomCanvas.items.forEach(it => {
+        if (it.spriteId === targetId || (targetFilename && it.filename === targetFilename)) {
+          it.category = newCat;
+        }
+      });
+
+      // Re-render library and placed tabs
+      renderCategoryTabs();
+      renderLibrary();
+      renderPlacedList(false);
+
+      // Auto-save active layout so category is saved with layout too
+      if (layoutManager && layoutManager.getActiveId()) {
+        layoutManager.saveActive(roomCanvas.getLayoutData());
+      }
+
+      showToast(`Category updated to "${newCat}" for ${targetFilename || target.name || 'sprite'}`);
+    });
+  }
 
   // Aspect Lock Toggle
   btnToggleAspect.addEventListener('click', () => {
@@ -876,8 +962,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   btnOpenBgRemover.addEventListener('click', () => {
-    if (roomCanvas.selectedItem) {
-      openBgRemover(roomCanvas.selectedItem);
+    const target = roomCanvas.selectedItem || activeInspectedSprite;
+    if (target) {
+      openBgRemover(target);
     }
   });
 
@@ -887,11 +974,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Check if the image is already loaded in memory
     const targetId = target.spriteId || target.id;
-    let existingImg = library ? library.getImage(targetId) : null;
+    let existingImg = library ? (library.getImage(targetId) || library.getImageByFilename(target.filename) || library.getImageBySrc(target.src)) : null;
 
     function onImageReady(img) {
       activeBgImg = img;
       bgOriginalImg.src = img.src;
+      bgOriginalImg.style.maxHeight = '194px';
+      bgOriginalImg.style.maxWidth = '100%';
+      bgOriginalImg.style.width = 'auto';
+      bgOriginalImg.style.height = 'auto';
 
       // Auto-detect corner background color
       const cornerColor = BackgroundRemover.getCornerColor(img);
@@ -899,9 +990,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       bgColorPicker.value = hex;
       bgColorHex.textContent = hex;
 
-      // Reset tolerance default
-      bgTolerance.value = 20;
-      bgToleranceVal.textContent = '20%';
+      // Apply session tolerance (defaults to 20% on page load)
+      bgTolerance.value = sessionBgTolerance;
+      bgToleranceVal.textContent = sessionBgTolerance + '%';
 
       updateBgPreview();
       bgRemoverModal.classList.add('is-active');
@@ -969,6 +1060,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       bgResultCanvas.width = processedCanvas.width || (activeBgImg.naturalWidth || activeBgImg.width) || 64;
       bgResultCanvas.height = processedCanvas.height || (activeBgImg.naturalHeight || activeBgImg.height) || 64;
+      bgResultCanvas.style.maxHeight = '194px';
+      bgResultCanvas.style.maxWidth = '100%';
+      bgResultCanvas.style.width = 'auto';
+      bgResultCanvas.style.height = 'auto';
       const ctx = bgResultCanvas.getContext('2d');
       ctx.clearRect(0, 0, bgResultCanvas.width, bgResultCanvas.height);
       ctx.drawImage(processedCanvas, 0, 0);
@@ -978,8 +1073,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   bgTolerance.addEventListener('input', () => {
-    bgToleranceVal.textContent = bgTolerance.value + '%';
+    sessionBgTolerance = parseInt(bgTolerance.value, 10) || 20;
+    bgToleranceVal.textContent = sessionBgTolerance + '%';
     updateBgPreview();
+  });
+  bgTolerance.addEventListener('change', () => {
+    sessionBgTolerance = parseInt(bgTolerance.value, 10) || 20;
   });
 
   bgColorPicker.addEventListener('input', () => {
@@ -1026,7 +1125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Apply Transparent Background to sprite
+  // Apply Transparent Background to sprite (kept across layout save & page refresh)
   btnApplyTransparent.addEventListener('click', () => {
     if (!activeBgTarget || !bgResultCanvas) return;
 
@@ -1034,7 +1133,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const newImg = new Image();
     newImg.onload = () => {
       const targetId = activeBgTarget.spriteId || activeBgTarget.id;
+      if (!roomCanvas.itemImages) roomCanvas.itemImages = new Map();
+
       library.loadedImages.set(targetId, newImg);
+      library.loadedImages.set(dataUrl, newImg);
+
+      // If activeBgTarget is a specific canvas item
+      if (activeBgTarget.id && activeBgTarget.x !== undefined) {
+        activeBgTarget.src = dataUrl;
+        roomCanvas.itemImages.set(activeBgTarget.id, newImg);
+      }
 
       // Update in Library
       const libSprite = library.sprites.find(s => s.id === targetId || s.filename === activeBgTarget.filename);
@@ -1044,8 +1152,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Update on Canvas items
       roomCanvas.items.forEach(item => {
-        if (item.spriteId === targetId || item === activeBgTarget) {
+        if (item.spriteId === targetId || item === activeBgTarget || (activeBgTarget.filename && item.filename === activeBgTarget.filename)) {
           item.src = dataUrl;
+          roomCanvas.itemImages.set(item.id, newImg);
         }
       });
 
@@ -1053,10 +1162,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         inspPreviewImg.src = dataUrl;
       }
 
+      // Auto-save active layout so transparent data is preserved across refresh
+      if (layoutManager && layoutManager.getActiveId()) {
+        layoutManager.saveActive(roomCanvas.getLayoutData());
+      }
+
       roomCanvas.requestRender();
       renderLibrary();
       closeBgModal();
-      showToast('Transparent sprite applied!');
+      showToast('Transparent sprite applied to scene!');
     };
     newImg.src = dataUrl;
   });
@@ -1074,7 +1188,93 @@ document.addEventListener('DOMContentLoaded', async () => {
     showToast(`Downloaded "${outName}"`);
   });
 
-  // Save directly to assets/sprites/ on disk
+  // Overwrite original sprite in library and on disk
+  if (btnSaveOverwrite) {
+    btnSaveOverwrite.addEventListener('click', async () => {
+      if (!activeBgTarget || !bgResultCanvas) return;
+      const targetFilename = activeBgTarget.filename || (activeBgTarget.src ? activeBgTarget.src.split('/').pop().split('?')[0] : 'sprite.png');
+      const pack = activeBgTarget.pack || (library.selectedPack !== 'All' ? library.selectedPack : 'Core');
+      const dataUrl = bgResultCanvas.toDataURL('image/png');
+
+      try {
+        const res = await fetch('/api/save-sprite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: targetFilename,
+            dataUrl: dataUrl,
+            pack: pack,
+            overwrite: true
+          })
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          const savedFilename = json.filename || targetFilename;
+          const savedPath = json.path || `assets/sprites/${savedFilename}`;
+          const newSrc = `${savedPath}?t=${Date.now()}`;
+
+          // Create image in memory with cache-busting timestamp
+          const newImg = new Image();
+          newImg.onload = async () => {
+            const targetId = activeBgTarget.spriteId || activeBgTarget.id;
+            if (!roomCanvas.itemImages) roomCanvas.itemImages = new Map();
+
+            // Update library image cache
+            library.loadedImages.set(targetId, newImg);
+            library.loadedImages.set(savedFilename.toLowerCase(), newImg);
+            library.loadedImages.set(savedPath, newImg);
+            library.loadedImages.set(targetFilename.toLowerCase(), newImg);
+
+            // Update library sprites
+            const libSprite = library.sprites.find(s => s.id === targetId || s.filename === targetFilename || s.filename === savedFilename);
+            if (libSprite) {
+              libSprite.filename = savedFilename;
+              libSprite.src = savedPath;
+            }
+
+            // Update canvas items that share this sprite
+            roomCanvas.items.forEach(item => {
+              if (item.spriteId === targetId || item.filename === targetFilename || item === activeBgTarget) {
+                item.filename = savedFilename;
+                item.src = savedPath;
+                roomCanvas.itemImages.set(item.id, newImg);
+              }
+            });
+
+            if (roomCanvas.selectedItem) {
+              inspPreviewImg.src = dataUrl;
+            }
+
+            // Auto-discover / reload library manifest
+            await library.autoDiscoverAssets();
+            renderLibrary();
+            roomCanvas.requestRender();
+
+            // Save active layout if one is active
+            if (layoutManager && layoutManager.getActiveId()) {
+              layoutManager.saveActive(roomCanvas.getLayoutData());
+            }
+
+            closeBgModal();
+            showToast(`Overwrote "${savedFilename}" in library!`);
+          };
+          newImg.src = newSrc;
+        } else {
+          throw new Error('Server returned non-200');
+        }
+      } catch (err) {
+        console.error('Failed to overwrite sprite on server:', err);
+        showToast('Could not overwrite on disk. Downloading transparent PNG instead...');
+        const link = document.createElement('a');
+        link.download = targetFilename.replace(/\.[^/.]+$/, '.png');
+        link.href = dataUrl;
+        link.click();
+      }
+    });
+  }
+
+  // Save as a new asset copy in the library and on disk
   btnSaveToAssets.addEventListener('click', async () => {
     if (!activeBgTarget || !bgResultCanvas) return;
     const base = (activeBgTarget.filename || 'sprite').replace(/\.[^/.]+$/, '');
@@ -1088,16 +1288,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         body: JSON.stringify({
           filename: outName,
           dataUrl: dataUrl,
-          pack: activeBgTarget.pack || (library.selectedPack !== 'All' ? library.selectedPack : 'Core')
+          pack: activeBgTarget.pack || (library.selectedPack !== 'All' ? library.selectedPack : 'Core'),
+          overwrite: false
         })
       });
 
       if (res.ok) {
         const json = await res.json();
-        showToast(`Saved "${outName}" to assets/sprites folder!`);
+        showToast(`Saved as new asset "${outName}" in library!`);
         // Refresh library to include the new transparent asset
         await library.autoDiscoverAssets();
         renderLibrary();
+        closeBgModal();
       } else {
         throw new Error('Server returned non-200');
       }
@@ -1746,6 +1948,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
           </svg>
         </button>
+        <button class="sprite-inspect-btn" title="Inspect & change category in Inspector">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+        </button>
         <button class="sprite-wand-btn" title="Remove background & make transparent">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M15 4V2m0 16v-2m6-6h-2M4 12H2m15.5-5.5l-1.5 1.5M6 18l-1.5 1.5M14 9l-9 9 2 2 9-9z"/>
@@ -1767,6 +1974,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           showToast(`Deleted "${sprite.name}" from library`);
         }
       });
+
+      // Inspect button click (opens inspector to view or change category)
+      const inspectBtn = card.querySelector('.sprite-inspect-btn');
+      if (inspectBtn) {
+        inspectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openInspectorForLibrarySprite(sprite);
+        });
+      }
 
       // Wand button click to remove background
       const wandBtn = card.querySelector('.sprite-wand-btn');
@@ -1833,47 +2049,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     folderFileInput.click();
   });
 
+  // =========================================================================
+  // Custom Sprite Uploads & Drag-and-Drop Library Import
+  // =========================================================================
+  const isImageFile = (file) => {
+    if (!file || !file.name) return false;
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    const validExts = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
+    return validExts.includes(ext) || (file.type && file.type.startsWith('image/'));
+  };
+
+  const handleDroppedFiles = async (fileList) => {
+    const files = Array.from(fileList).filter(isImageFile);
+    if (files.length === 0) return;
+
+    let savedCount = 0;
+    for (const file of files) {
+      try {
+        const newSprite = await library.addCustomSprite(file);
+        if (newSprite.savedToDisk) {
+          showToast(`Saved "${newSprite.filename}" to disk in "${newSprite.pack}" pack!`);
+          savedCount++;
+        } else {
+          showToast(`Added "${newSprite.filename}" to library`);
+        }
+      } catch (err) {
+        console.error('Error adding file:', err);
+        showToast(`Failed to load "${file.name}"`);
+      }
+    }
+    renderLibrary();
+    populatePackSelect();
+    renderCategoryTabs();
+  };
+
   folderFileInput.addEventListener('change', async (e) => {
     const count = await library.loadFolderFiles(e.target.files);
-    showToast(`Loaded ${count} sprites from folder`);
+    showToast(`Loaded and saved ${count} sprites from folder to disk!`);
     folderFileInput.value = '';
+    renderLibrary();
+    populatePackSelect();
+    renderCategoryTabs();
   });
 
   spriteFileInput.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
-    for (const file of files) {
-      try {
-        const newSprite = await library.addCustomSprite(file);
-        showToast(`Added "${newSprite.filename}"`);
-      } catch (err) {
-        console.error(err);
-        showToast('Error reading uploaded image file');
-      }
-    }
+    await handleDroppedFiles(e.target.files);
     spriteFileInput.value = '';
   });
 
-  uploadDropzone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadDropzone.classList.add('drag-active');
-  });
+  // Drag and drop onto uploadDropzone or anywhere across the library panel
+  const dropTargets = [uploadDropzone, tabContentLibrary, libraryGrid].filter(Boolean);
 
-  uploadDropzone.addEventListener('dragleave', () => {
-    uploadDropzone.classList.remove('drag-active');
-  });
-
-  uploadDropzone.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    uploadDropzone.classList.remove('drag-active');
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-    for (const file of files) {
-      try {
-        const newSprite = await library.addCustomSprite(file);
-        showToast(`Uploaded "${newSprite.filename}"`);
-      } catch (err) {
-        console.error(err);
+  dropTargets.forEach(target => {
+    target.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.types && (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.contains('Files'))) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        uploadDropzone.classList.add('drag-active');
       }
-    }
+    });
+
+    target.addEventListener('dragleave', (e) => {
+      // Only remove if leaving towards outside the library target
+      if (!target.contains(e.relatedTarget)) {
+        uploadDropzone.classList.remove('drag-active');
+      }
+    });
+
+    target.addEventListener('drop', async (e) => {
+      if (e.dataTransfer.types && (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.contains('Files'))) {
+        e.preventDefault();
+        uploadDropzone.classList.remove('drag-active');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          await handleDroppedFiles(e.dataTransfer.files);
+        }
+      }
+    });
   });
 
   // =========================================================================
