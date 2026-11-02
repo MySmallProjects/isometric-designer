@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixed JPEG Sprite Slicer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #1e1e24; color: #f5f5f5; margin: 20px; }
+        .controls { background: #2a2a35; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+        .control-group { display: flex; align-items: center; gap: 8px; }
+        button { background: #4f46e5; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #4338ca; }
+        button:disabled { background: #4b5563; cursor: not-allowed; }
+        #runBtn { background: #10b981; }
+        #runBtn:hover { background: #059669; }
+        .canvas-container { position: relative; max-width: 100%; overflow: auto; background: repeating-conic-gradient(#333 0% 25%, #444 0% 50%) 0 / 20px 20px; border-radius: 8px; }
+        canvas { display: block; }
+        #bgColorPreview { width: 24px; height: 24px; border: 2px solid #fff; border-radius: 4px; display: inline-block; vertical-align: middle; }
+        input[type="range"] { cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>Fixed JPEG Auto-Sprite Slicer</h1>
+    <p>Upload a JPEG sheet. Adjust the threshold slider to eliminate compression noise around your sprites, then re-run or download.</p>
+
+    <div class="controls">
+        <div class="control-group">
+            <input type="file" id="upload" accept="image/*">
+        </div>
+        
+        <div class="control-group">
+            <span>BG Color:</span>
+            <div id="bgColorPreview" title="Top-left pixel color"></div>
+        </div>
+
+        <div class="control-group">
+            <label for="toleranceSlider">JPEG Tolerance Threshold:</label>
+            <input type="range" id="toleranceSlider" min="0" max="100" value="25">
+            <span id="toleranceVal">25</span>
+        </div>
+
+        <div class="control-group">
+            <button id="runBtn" disabled>Re-Run Detection</button>
+            <button id="downloadBtn" disabled>Download Sprites (.ZIP)</button>
+        </div>
+
+        <span id="status"></span>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="mainCanvas"></canvas>
+    </div>
+
+    <script>
+        const upload = document.getElementById('upload');
+        const mainCanvas = document.getElementById('mainCanvas');
+        const mainCtx = mainCanvas.getContext('2d');
+        
+        const hiddenCanvas = document.createElement('canvas');
+        const hiddenCtx = hiddenCanvas.getContext('2d', { willReadFrequently: true });
+
+        const downloadBtn = document.getElementById('downloadBtn');
+        const runBtn = document.getElementById('runBtn');
+        const status = document.getElementById('status');
+        const bgColorPreview = document.getElementById('bgColorPreview');
+        const toleranceSlider = document.getElementById('toleranceSlider');
+        const toleranceVal = document.getElementById('toleranceVal');
+
+        let spriteBounds = []; 
+        let loadedImage = null;
+        let bgR = 0, bgG = 0, bgB = 0;
+
+        toleranceSlider.addEventListener('input', (e) => {
+            toleranceVal.textContent = e.target.value;
+        });
+
+        toleranceSlider.addEventListener('change', () => {
+            if (loadedImage) {
+                status.textContent = "Recalculating with new threshold...";
+                setTimeout(detectSprites, 10);
+            }
+        });
+
+        runBtn.addEventListener('click', () => {
+            if (loadedImage) {
+                status.textContent = "Manually re-running detection...";
+                setTimeout(detectSprites, 10);
+            }
+        });
+
+        upload.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    loadedImage = img;
+                    
+                    mainCanvas.width = img.width;
+                    mainCanvas.height = img.height;
+                    hiddenCanvas.width = img.width;
+                    hiddenCanvas.height = img.height;
+                    
+                    hiddenCtx.drawImage(img, 0, 0);
+                    
+                    const topLeftPixel = hiddenCtx.getImageData(0, 0, 1, 1).data;
+                    bgR = topLeftPixel[0];
+                    bgG = topLeftPixel[1];
+                    bgB = topLeftPixel[2];
+
+                    bgColorPreview.style.backgroundColor = `rgb(${bgR}, ${bgG}, ${bgB})`;
+
+                    runBtn.disabled = false;
+                    status.textContent = "Image loaded. Analyzing layout...";
+                    setTimeout(detectSprites, 50);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(files[0]);
+        });
+
+        function detectSprites() {
+            const width = hiddenCanvas.width;
+            const height = hiddenCanvas.height;
+            const imgData = hiddenCtx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+
+            const visited = new Uint8Array(width * height);
+            spriteBounds = [];
+            
+            const tolerance = parseInt(toleranceSlider.value, 10);
+
+            const isBackgroundPixel = (x, y) => {
+                const idx = ((y * width) + x) * 4;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+                const a = data[idx + 3];
+
+                if (a === 0) return true;
+
+                return Math.abs(r - bgR) <= tolerance && 
+                       Math.abs(g - bgG) <= tolerance && 
+                       Math.abs(b - bgB) <= tolerance;
+            };
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = y * width + x;
+
+                    if (!isBackgroundPixel(x, y) && !visited[idx]) {
+                        let minX = x, maxX = x, minY = y, maxY = y;
+                        const queue = [x, y];
+                        visited[idx] = 1;
+
+                        let head = 0;
+                        while (head < queue.length) {
+                            const cx = queue[head++];
+                            const cy = queue[head++];
+
+                            const neighbors = [
+                                [cx + 1, cy], [cx - 1, cy],
+                                [cx, cy + 1], [cx, cy - 1]
+                            ];
+
+                            for (const [nx, ny] of neighbors) {
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    const nIdx = ny * width + nx;
+                                    if (!visited[nIdx] && !isBackgroundPixel(nx, ny)) {
+                                        visited[nIdx] = 1;
+                                        queue.push(nx, ny);
+
+                                        if (nx < minX) minX = nx;
+                                        if (nx > maxX) maxX = nx;
+                                        if (ny < minY) minY = ny;
+                                        if (ny > maxY) maxY = ny;
+                                    }
+                                }
+                            }
+                        }
+
+                        if ((maxX - minX >= 1) || (maxY - minY >= 1)) {
+                            spriteBounds.push({ minX, minY, maxX, maxY });
+                        }
+                    }
+                }
+            }
+
+            status.textContent = `Found ${spriteBounds.length} sprites.`;
+            drawBoundingBoxes();
+            downloadBtn.disabled = spriteBounds.length === 0;
+        }
+
+        function drawBoundingBoxes() {
+            mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+            mainCtx.drawImage(loadedImage, 0, 0);
+
+            mainCtx.strokeStyle = '#00ffcc';
+            mainCtx.lineWidth = 1;
+            for (const box of spriteBounds) {
+                const w = box.maxX - box.minX + 1;
+                const h = box.maxY - box.minY + 1;
+                mainCtx.strokeRect(box.minX, box.minY, w, h);
+            }
+        }
+
+        downloadBtn.addEventListener('click', async () => {
+            status.textContent = "Compiling PNGs (stripping background noise)...";
+            const zip = new JSZip();
+            const tolerance = parseInt(toleranceSlider.value, 10);
+            
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            for (let i = 0; i < spriteBounds.length; i++) {
+                const box = spriteBounds[i];
+                const w = box.maxX - box.minX + 1;
+                const h = box.maxY - box.minY + 1;
+
+                tempCanvas.width = w;
+                tempCanvas.height = h;
+                tempCtx.clearRect(0, 0, w, h);
+
+                const spriteImgData = hiddenCtx.getImageData(box.minX, box.minY, w, h);
+                const sData = spriteImgData.data;
+
+                for (let j = 0; j < sData.length; j += 4) {
+                    const r = sData[j];
+                    const g = sData[j+1];
+                    const b = sData[j+2];
+                    
+                    if (Math.abs(r - bgR) <= tolerance && Math.abs(g - bgG) <= tolerance && Math.abs(b - bgB) <= tolerance) {
+                        sData[j+3] = 0; 
+                    }
+                }
+
+                tempCtx.putImageData(spriteImgData, 0, 0);
+
+                const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+                zip.file(`sprite_${String(i).padStart(3, '0')}.png`, blob);
+            }
+
+            const content = await zip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = 'clean_extracted_sprites.zip';
+            link.click();
+            status.textContent = "Download complete!";
+        });
+    </script>
+</body>
+</html>
